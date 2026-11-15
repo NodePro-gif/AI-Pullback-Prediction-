@@ -7,6 +7,7 @@ import pandas as pd
 import typer
 
 from pullback_prediction.backtesting.engine import backtest_signals
+from pullback_prediction.data.downloader import download_dukascopy_bid_ask
 from pullback_prediction.data.loader import (
     load_dukascopy_bid_ask_pair,
     load_dukascopy_csv,
@@ -17,6 +18,29 @@ from pullback_prediction.training.inference import predict_frame
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
 
+
+@app.command("download-data")
+def download_data_command(
+    from_date: str = typer.Option(..., "--from-date"),
+    to_date: str = typer.Option(..., "--to-date"),
+    timeframe: str = typer.Option(..., "--timeframe"),
+    output_dir: Path = typer.Option(Path("data/raw"), "--output-dir"),
+    batch_size: int = typer.Option(10, "--batch-size", min=1),
+    batch_pause_ms: int = typer.Option(1000, "--batch-pause-ms", min=0),
+    retries: int = typer.Option(3, "--retries", min=0),
+) -> None:
+    """Download raw XAUUSD bid and ask CSV exports from Dukascopy."""
+    bid_path, ask_path = download_dukascopy_bid_ask(
+        from_date,
+        to_date,
+        timeframe=timeframe,
+        output_dir=output_dir,
+        batch_size=batch_size,
+        batch_pause_ms=batch_pause_ms,
+        retries=retries,
+    )
+    typer.echo(f"bid_file={bid_path}")
+    typer.echo(f"ask_file={ask_path}")
 
 @app.command("validate-data")
 def validate_data(
