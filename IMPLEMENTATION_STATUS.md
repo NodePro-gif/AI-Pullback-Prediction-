@@ -11,13 +11,15 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | HistGradientBoosting baseline | verified in unit tests | Full 2015–2020 market-data fit pending |
 | Isotonic calibration and inference abstention | verified in unit tests | Calibration on 2021–2022; holdout evaluation on 2023 |
 | Expanding-window walk-forward | verified in unit tests | Candle gap enforced before invalid-row filtering; final-test partition excluded |
-| HistGradientBoosting / XGBoost benchmark | implemented, verification pending | Same folds and metrics; optional XGBoost dependency; CI run pending |
+| HistGradientBoosting benchmark | verified in CI | Same expanding folds and metrics; test coverage on Python 3.11/3.12 |
+| XGBoost benchmark path | implemented, unverified | Optional dependency and binary/multiclass mapping; run with `.[xgboost]` on real data |
 | Bid/ask cost-aware backtester | verified in unit tests | Next-open entries, adverse slippage, commission, stop-first collisions |
-| CLI workflow | implemented, verification pending | Download, validate, prepare, split, train, predict, walk-forward, benchmark, backtest |
-| FastAPI inference service | implemented, verification pending | Read-only /health and /predict endpoints; no order execution |
+| CLI workflow | verified by smoke/unit tests | Download, validate, prepare, split, train, predict, walk-forward, benchmark, backtest; full historical run pending |
+| FastAPI inference service | verified by contract tests | Read-only /health and /predict; timestamp, OHLC, quote validation; no order execution |
 | Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
 | Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
-| LSTM / Transformer sequence models | implemented, verification pending | Trailing windows, CUDA/MPS auto-selection, class weighting, gradient clipping and early stopping; fold integration and inference export pending |
+| Sequence window generation | verified by unit tests | Chronological trailing windows; invalid windows dropped |
+| LSTM / Transformer training | implemented, unverified | CUDA/MPS auto-selection, class weighting, gradient clipping and early stopping; PyTorch optional test skipped in base CI; fold integration and inference export pending |
 | Regime detector and meta-learner | pending | Requires out-of-fold predictions and separate calibration |
 | Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
 
