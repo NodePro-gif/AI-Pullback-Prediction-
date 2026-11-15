@@ -89,3 +89,65 @@ def test_prepare_data_cli_converts_bid_ask_csv_to_parquet(tmp_path):
     assert len(prepared) == 2
     assert prepared.index[0] == pd.Timestamp("2024-01-01T00:00:00Z")
     assert prepared["ask_close"].gt(prepared["bid_close"]).all()
+
+
+
+def test_walk_forward_cli_never_includes_final_test_partition(tmp_path, monkeypatch):
+    import json
+
+    from pullback_prediction import cli
+
+    train_index = pd.date_range("2015-01-01", periods=2, freq="min", tz="UTC")
+    validation_index = pd.date_range("2021-01-01", periods=2, freq="min", tz="UTC")
+    test_index = pd.date_range("2024-01-01", periods=2, freq="min", tz="UTC")
+    index = train_index.append(validation_index).append(test_index)
+    source = tmp_path / "candles.parquet"
+    pd.DataFrame({"placeholder": range(len(index))}, index=index).to_parquet(source)
+    output_dir = tmp_path / "walk-forward"
+    observed = {}
+
+    def fake_build_features(development):
+        observed["feature_index"] = development.index
+        return pd.DataFrame(
+            {"atr_14": 1.0, "feature": range(len(development))},
+            index=development.index,
+        )
+
+    def fake_labels(development, atr, horizon_bars, barrier_atr_multiple):
+        observed["label_index"] = development.index
+        return pd.Series([-1, 1, -1, 1], index=development.index)
+
+    def fake_walk_forward(features, labels, **kwargs):
+        observed["walk_index"] = features.index
+        observed["gap_bars"] = kwargs["gap_bars"]
+        return {
+            "summary": {"folds": 2, "test_rows": 2, "weighted_accuracy": 0.5},
+            "folds": [{"fold": 1, "accuracy": 0.5}],
+        }
+
+    monkeypatch.setattr(cli, "build_features", fake_build_features)
+    monkeypatch.setattr(cli, "make_barrier_labels", fake_labels)
+    monkeypatch.setattr(cli, "walk_forward_evaluate", fake_walk_forward)
+
+    result = CliRunner().invoke(
+        app,
+        [
+            "walk-forward",
+            "--input",
+            str(source),
+            "--output-dir",
+            str(output_dir),
+            "--n-splits",
+            "2",
+            "--horizon-bars",
+            "2",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert observed["feature_index"].max() < pd.Timestamp("2024-01-01", tz="UTC")
+    assert observed["label_index"].equals(observed["walk_index"])
+    assert observed["gap_bars"] == 2
+    assert (output_dir / "folds.csv").exists()
+    summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
+    assert summary["folds"] == 2
