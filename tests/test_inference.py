@@ -17,12 +17,14 @@ class FixedProbabilityModel:
 def sample_candles(timeframe="M1"):
     frequency = "min" if timeframe == "M1" else "5min"
     index = pd.date_range("2024-01-01", periods=600, freq=frequency, tz="UTC")
-    close = 2000 + np.arange(len(index), dtype=float) * 0.02
+    steps = np.arange(len(index), dtype=float)
+    close = 2000 + steps * 0.02 + np.sin(steps / 7) * 0.4
+    spread = 0.2 + np.sin(steps / 13) * 0.04
     frame = pd.DataFrame(index=index)
-    for side, offset in (("bid", 0.0), ("ask", 0.2)):
+    for side, offset in (("bid", 0.0), ("ask", spread)):
         frame[f"{side}_open"] = close + offset
-        frame[f"{side}_high"] = close + offset + 0.1
-        frame[f"{side}_low"] = close + offset - 0.1
+        frame[f"{side}_high"] = close + offset + 0.1 + np.sin(steps / 5) * 0.02
+        frame[f"{side}_low"] = close + offset - 0.1 - np.sin(steps / 5) * 0.02
         frame[f"{side}_close"] = close + offset
     return frame
 
@@ -119,7 +121,7 @@ def test_predict_frame_rejects_mismatched_model_timeframe(tmp_path):
 
 def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
     candles = sample_candles()
-    candles.index = pd.date_range("2024-01-01", periods=220, freq="5min", tz="UTC")
+    candles.index = pd.date_range("2024-01-01", periods=len(candles), freq="5min", tz="UTC")
     columns = list(build_features(candles).columns)
     artifact = tmp_path / "m1_model.joblib"
     joblib.dump(
