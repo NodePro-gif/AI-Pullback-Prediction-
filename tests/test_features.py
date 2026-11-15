@@ -42,6 +42,7 @@ def test_future_price_change_does_not_change_past_features():
 
 def test_features_include_causal_trend_volatility_spread_and_time_context():
     frame = _candles(320)
+    frame["ask_close"] += 0.02 * np.sin(np.arange(len(frame)) / 7)
     result = build_features(frame)
 
     expected = {
