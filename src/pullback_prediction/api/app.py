@@ -45,6 +45,7 @@ class Prediction(BaseModel):
     timestamp: datetime
     signal: str
     confidence: float
+    probabilities_calibrated: bool
     prob_sell: float
     prob_wait: float
     prob_buy: float
@@ -101,6 +102,7 @@ def predict(request: PredictionRequest) -> list[Prediction]:
                 timestamp=timestamp.to_pydatetime(),
                 signal=names[int(row["signal"])],
                 confidence=float(row["confidence"]),
+                probabilities_calibrated=bool(row["probabilities_calibrated"]),
                 prob_sell=float(row["prob_sell"]),
                 prob_wait=float(row["prob_wait"]),
                 prob_buy=float(row["prob_buy"]),
