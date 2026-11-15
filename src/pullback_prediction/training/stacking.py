@@ -173,9 +173,6 @@ def train_stacked_from_frame(
         horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple,
     )
-    feature_valid = features.notna().all(axis=1)
-    label_valid = labels.notna()
-    train_mask = training.index.isin(development.index)
     train_x = features.loc[training.index]
     train_y = labels.loc[training.index]
     train_valid = train_x.notna().all(axis=1) & train_y.notna()
@@ -256,7 +253,7 @@ def train_stacked_from_frame(
     joblib.dump(artifact, destination)
     metrics_path = destination.with_suffix(".metrics.json")
     metrics_path.write_text(
-        json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\\n",
+        json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     return {**metrics, "model_path": str(destination), "metrics_path": str(metrics_path)}
