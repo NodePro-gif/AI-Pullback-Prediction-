@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 
 from pullback_prediction.features.technical import build_features
+from pullback_prediction.training.calibration import apply_probability_calibrators
 
 
 def predict_frame(
@@ -18,10 +19,11 @@ def predict_frame(
     *,
     min_probability: float = 0.60,
 ) -> pd.DataFrame:
-    """Return class probabilities and BUY/SELL/WAIT signals for each candle.
+    """Return calibrated class scores and BUY/SELL/WAIT signals for each candle.
 
-    The model's raw class probabilities are not calibrated probabilities.
-    The threshold is a configurable abstention gate, not a profitability claim.
+    Artifacts with a validation-fitted calibrator return calibrated probabilities.
+    Older artifacts return raw model scores. The abstention threshold is not a
+    profitability claim.
     """
     if not 0.0 <= min_probability <= 1.0:
         raise ValueError("min_probability must be between 0 and 1.")
@@ -41,6 +43,13 @@ def predict_frame(
     classes = np.asarray(model.classes_, dtype=int)
     if probabilities.shape != (len(candles), len(classes)):
         raise ValueError("Model probability output has an unexpected shape.")
+    calibrators = artifact.get("calibrators")
+    probabilities_calibrated = calibrators is not None
+    if probabilities_calibrated:
+        calibration_classes = np.asarray(artifact.get("calibration_classes"), dtype=int)
+        if not np.array_equal(calibration_classes, classes):
+            raise ValueError("Calibration classes do not match model classes.")
+        probabilities = apply_probability_calibrators(probabilities, calibrators)
 
     best_indices = probabilities.argmax(axis=1)
     predicted_class = classes[best_indices]
@@ -56,6 +65,7 @@ def predict_frame(
             "signal": signal,
             "predicted_class": predicted_class.astype("int8"),
             "confidence": confidence,
+            "probabilities_calibrated": probabilities_calibrated,
             "prob_sell": 0.0,
             "prob_wait": 0.0,
             "prob_buy": 0.0,
