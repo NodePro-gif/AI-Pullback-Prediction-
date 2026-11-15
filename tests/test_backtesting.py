@@ -84,3 +84,34 @@ def test_backtester_rejects_misaligned_inputs():
             pd.Series([1], index=frame.index),
             pd.Series([1.0], index=pd.date_range("2024-01-02", periods=1, tz="UTC")),
         )
+
+
+
+def test_short_trade_enters_bid_and_exits_ask_with_adverse_slippage():
+    frame = candles(
+        [
+            [100.0, 100.5, 99.5, 100.0, 100.2, 100.7, 99.7, 100.2],
+            [100.8, 101.0, 100.5, 100.7, 101.0, 101.2, 100.7, 100.9],
+            [99.0, 99.5, 98.5, 99.0, 99.2, 99.7, 98.7, 99.2],
+        ],
+        columns=[
+            "bid_open", "bid_high", "bid_low", "bid_close",
+            "ask_open", "ask_high", "ask_low", "ask_close",
+        ],
+    )
+    result = backtest_signals(
+        frame,
+        pd.Series([-1, 0, 0], index=frame.index),
+        pd.Series(1.0, index=frame.index),
+        stop_atr_multiple=1.0,
+        take_profit_atr_multiple=2.0,
+        max_holding_bars=2,
+        slippage_price=0.1,
+    )
+
+    trade = result["trades"].iloc[0]
+    assert trade["side"] == "SELL"
+    assert trade["entry_price"] == pytest.approx(100.7)
+    assert trade["exit_price"] == pytest.approx(98.8)
+    assert trade["exit_reason"] == "take_profit"
+    assert trade["net_pnl"] == pytest.approx(1.9)
