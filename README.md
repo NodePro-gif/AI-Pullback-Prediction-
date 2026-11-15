@@ -92,6 +92,36 @@ pullback-predict benchmark-models --input data/processed/XAUUSD_M1.parquet --out
 
 The benchmark writes per-model fold CSVs and aggregate metrics. Install `.[xgboost]` for XGBoost without installing PyTorch; install `.[deep-learning]` separately for PyTorch sequence models. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
 
+Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping and early stopping:
+
+```python
+from pullback_prediction.training.sequence import (
+    build_sequence_model,
+    make_sequence_windows,
+    train_sequence_model,
+)
+
+# Build windows independently inside train and validation partitions.
+train_windows = make_sequence_windows(train_features, train_labels, sequence_length=128)
+valid_windows = make_sequence_windows(valid_features, valid_labels, sequence_length=128)
+model = build_sequence_model(
+    "transformer",
+    n_features=train_windows.features.shape[-1],
+    n_classes=len(set(train_windows.labels.tolist())),
+)
+result = train_sequence_model(
+    model,
+    train_windows.features,
+    train_windows.labels,
+    valid_windows.features,
+    valid_windows.labels,
+)
+print(result["device"], result["best_validation_loss"])
+```
+
+Sequence training is a research component; model artifact export and production inference integration remain pending.
+
+
 ## Research dashboard and API
 
 Install the optional interfaces:
