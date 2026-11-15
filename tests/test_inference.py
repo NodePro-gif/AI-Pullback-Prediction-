@@ -2,7 +2,6 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
-import pytest
 
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.training.inference import predict_frame
@@ -116,6 +115,7 @@ def test_predict_frame_rejects_mismatched_model_timeframe(tmp_path):
 
     with pytest.raises(ValueError, match="does not match model artifact"):
         predict_frame(candles, artifact, timeframe="M5")
+
 
 def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
     candles = sample_candles()
