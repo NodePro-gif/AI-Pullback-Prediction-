@@ -44,7 +44,7 @@ class RegimeDetector:
         missing = set(feature_columns).difference(features.columns)
         if missing:
             raise ValueError(f"Missing regime features: {', '.join(sorted(missing))}.")
-        values = features.loc[:, feature_columns].apply(
+        values = features.loc[:, list(feature_columns)].apply(
             pd.to_numeric, errors="coerce"
         ).to_numpy(dtype=float)
         valid = np.isfinite(values).all(axis=1)
@@ -69,7 +69,7 @@ class RegimeDetector:
         missing = set(self.feature_columns).difference(features.columns)
         if missing:
             raise ValueError(f"Missing regime features: {', '.join(sorted(missing))}.")
-        values = features.loc[:, self.feature_columns].apply(
+        values = features.loc[:, list(self.feature_columns)].apply(
             pd.to_numeric, errors="coerce"
         ).to_numpy(dtype=float)
         valid = np.isfinite(values).all(axis=1)
