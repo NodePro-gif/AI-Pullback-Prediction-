@@ -91,8 +91,9 @@ def backtest_signals(
             or (side_frame["low"] > expected_low).any()
         ):
             raise ValueError(f"Invalid {side} OHLC candle.")
-    if (candles["ask_close"] < candles["bid_close"]).any():
-        raise ValueError("Ask close cannot be below bid close.")
+    for field in ("open", "high", "low", "close"):
+        if (candles[f"ask_{field}"] < candles[f"bid_{field}"]).any():
+            raise ValueError(f"Ask {field} cannot be below bid {field}.")
 
     parameters = np.asarray(
         [
