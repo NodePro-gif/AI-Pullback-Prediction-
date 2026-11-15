@@ -112,7 +112,7 @@ def load_dukascopy_csv(path: str | Path, timeframe: str) -> pd.DataFrame:
     frame = frame.set_index("timestamp").sort_index()
     if frame.index.has_duplicates:
         raise MarketDataError("Duplicate candle timestamps detected.")
-    expected = pd.Timedelta(minutes=1 if timeframe == "M1" else 5)
+    expected = pd.Timedelta("1min" if timeframe == "M1" else "5min")
     gaps = frame.index.to_series().diff().dropna()
     if (gaps < expected).any():
         raise MarketDataError("Rows are more frequent than the selected timeframe.")
