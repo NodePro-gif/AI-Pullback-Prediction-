@@ -1,4 +1,4 @@
-"""Command-line interface for data validation and preparation."""
+"""Command-line interface for data validation, preparation, and baseline training."""
 
 from pathlib import Path
 
@@ -10,6 +10,7 @@ from pullback_prediction.data.loader import (
     load_dukascopy_csv,
 )
 from pullback_prediction.data.splits import chronological_split
+from pullback_prediction.training.baseline import train_baseline_from_frame
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
 
@@ -44,6 +45,27 @@ def split_data(
         target = output_dir / f"{name}.parquet"
         partition.to_parquet(target)
         typer.echo(f"{name}: rows={len(partition)} path={target}")
+
+
+@app.command("train-baseline")
+def train_baseline(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    output: Path = typer.Option(Path("artifacts/xauusd_baseline.joblib"), "--output"),
+    horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
+    barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
+    max_iter: int = typer.Option(200, "--max-iter", min=1),
+) -> None:
+    """Train a gradient-boosting baseline; final-test data is excluded."""
+    frame = pd.read_parquet(input)
+    result = train_baseline_from_frame(
+        frame,
+        output,
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+        max_iter=max_iter,
+    )
+    for key, value in result.items():
+        typer.echo(f"{key}={value}")
 
 
 if __name__ == "__main__":
