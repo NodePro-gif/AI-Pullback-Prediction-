@@ -33,6 +33,22 @@ pip install -e ".[dev]"
 pytest
 ```
 
+## Download XAUUSD history
+
+The downloader requires Node.js/npm (`npx`). It pins `dukascopy-node` 1.51.1, downloads bid and ask separately, keeps a disk cache for interrupted runs, and refuses to overwrite completed raw files. The end date is exclusive.
+
+```bash
+pullback-predict download-data --from-date 2015-01-01 --to-date 2021-01-01 --timeframe M1 --output-dir data/raw
+```
+
+Repeat for `2021-01-01` to `2024-01-01` (validation) and `2024-01-01` to the desired end date (final test), and repeat for M5. Validate a bid/ask pair:
+
+```bash
+pullback-predict validate-data --input data/raw/xauusd-m1-bid-2015-01-01-2021-01-01.csv --ask-input data/raw/xauusd-m1-ask-2015-01-01-2021-01-01.csv --timeframe M1
+```
+
+Dukascopy exports Unix timestamps in milliseconds; the loader normalizes them to UTC.
+
 Validate a downloaded Dukascopy CSV:
 
 ```bash
