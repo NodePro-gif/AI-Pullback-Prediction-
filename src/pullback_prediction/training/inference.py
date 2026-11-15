@@ -29,17 +29,8 @@ def predict_frame(
     if not 0.0 <= min_probability <= 1.0:
         raise ValueError("min_probability must be between 0 and 1.")
 
-    if timeframe is not None:
-        if timeframe not in {"M1", "M5"}:
-            raise ValueError("timeframe must be M1 or M5.")
-        if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
-            raise ValueError("Candle index must contain timezone-aware timestamps.")
-        expected_interval = pd.Timedelta(
-            60 if timeframe == "M1" else 300, unit="s"
-        )
-        median_interval = candles.index.to_series().diff().dropna().median()
-        if median_interval != expected_interval:
-            raise ValueError("Candle spacing does not match the requested timeframe.")
+    if timeframe is not None and timeframe not in {"M1", "M5"}:
+        raise ValueError("timeframe must be M1 or M5.")
 
     artifact: dict[str, Any] = joblib.load(artifact_path)
     model = artifact.get("model")
@@ -52,14 +43,14 @@ def predict_frame(
             raise ValueError(
                 "Requested timeframe does not match model artifact; retrain or select the matching model."
             )
-        if not isinstance(candles.index, pd.DatetimeIndex):
-            raise ValueError("Candle data must use a DatetimeIndex.")
+        if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
+            raise ValueError("Candle index must contain timezone-aware timestamps.")
         seconds = 60 if timeframe == "M1" else 300
         intervals = candles.index.to_series().diff().dt.total_seconds()
         intervals = intervals[(intervals > 0) & (intervals <= seconds * 15)]
         if intervals.empty or not np.isclose(intervals.median(), seconds, atol=1):
             raise ValueError(
-                f"Candle timestamps do not match the requested {timeframe} timeframe."
+                f"Candle spacing does not match the requested {timeframe} timeframe."
             )
     if model is None or not feature_columns:
         raise ValueError("Model artifact must contain model and feature_columns.")
