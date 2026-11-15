@@ -5,7 +5,10 @@ from pathlib import Path
 import pandas as pd
 import typer
 
-from pullback_prediction.data.loader import load_dukascopy_csv
+from pullback_prediction.data.loader import (
+    load_dukascopy_bid_ask_pair,
+    load_dukascopy_csv,
+)
 from pullback_prediction.data.splits import chronological_split
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
@@ -15,9 +18,13 @@ app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction researc
 def validate_data(
     input: Path = typer.Option(..., "--input", exists=True, readable=True),
     timeframe: str = typer.Option(..., "--timeframe"),
+    ask_input: Path | None = typer.Option(None, "--ask-input", exists=True, readable=True),
 ) -> None:
-    """Validate and summarize a Dukascopy bid/ask candle CSV."""
-    frame = load_dukascopy_csv(input, timeframe=timeframe)
+    """Validate a combined bid/ask CSV or separate bid and ask CSV exports."""
+    if ask_input is None:
+        frame = load_dukascopy_csv(input, timeframe=timeframe)
+    else:
+        frame = load_dukascopy_bid_ask_pair(input, ask_input, timeframe=timeframe)
     typer.echo(f"rows={len(frame)}")
     typer.echo(f"start={frame.index.min().isoformat()}")
     typer.echo(f"end={frame.index.max().isoformat()}")
