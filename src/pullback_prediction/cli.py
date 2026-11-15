@@ -20,8 +20,8 @@ from pullback_prediction.training.baseline import train_baseline_from_frame
 from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.inference import predict_frame
 from pullback_prediction.training.regime import RegimeDetector
-from pullback_prediction.training.stacking import train_stacked_from_frame
 from pullback_prediction.training.sequence_pipeline import train_sequence_from_frame
+from pullback_prediction.training.stacking import train_stacked_from_frame
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
