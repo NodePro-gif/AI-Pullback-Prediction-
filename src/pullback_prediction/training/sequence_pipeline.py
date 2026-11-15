@@ -84,7 +84,8 @@ def train_sequence_from_frame(
     evaluation = validation.loc[validation.index >= evaluation_cutoff]
     if training.empty or early_stopping.empty or calibration.empty or evaluation.empty:
         raise ValueError(
-            "2015–2020 train, 2021 early stopping, 2022 calibration and 2023 evaluation are required."
+            "2015–2020 train, 2021 early stopping, 2022 calibration, "
+            "and 2023 evaluation are required."
         )
 
     # Only development candles are passed to feature engineering. 2024+ is never read.
