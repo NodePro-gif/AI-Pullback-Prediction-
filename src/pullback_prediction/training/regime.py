@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 import pandas as pd
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
 from sklearn.preprocessing import StandardScaler
 
 DEFAULT_REGIME_FEATURES = (
@@ -25,7 +25,7 @@ class RegimeDetector:
 
     feature_columns: tuple[str, ...]
     scaler: StandardScaler
-    model: KMeans
+    model: MiniBatchKMeans
 
     @classmethod
     def fit(
@@ -35,10 +35,11 @@ class RegimeDetector:
         n_regimes: int = 4,
         feature_columns: tuple[str, ...] = DEFAULT_REGIME_FEATURES,
         random_state: int = 42,
+        batch_size: int = 4096,
     ) -> "RegimeDetector":
         """Fit clusters using finite rows from the supplied training features."""
-        if n_regimes < 2:
-            raise ValueError("n_regimes must be at least 2.")
+        if n_regimes < 2 or batch_size < 1:
+            raise ValueError("n_regimes must be >= 2 and batch_size must be positive.")
         if not features.index.is_monotonic_increasing or not features.index.is_unique:
             raise ValueError("Feature index must be unique and chronological.")
         missing = set(feature_columns).difference(features.columns)
@@ -51,14 +52,17 @@ class RegimeDetector:
         training_values = values[valid]
         if len(training_values) < n_regimes:
             raise ValueError("Not enough finite training rows for the requested regimes.")
-        if np.unique(training_values, axis=0).shape[0] < n_regimes:
+        sample = training_values[: min(len(training_values), 10_000)]
+        if np.unique(sample, axis=0).shape[0] < n_regimes:
             raise ValueError("Training features contain fewer unique rows than regimes.")
 
         scaler = StandardScaler()
         scaled = scaler.fit_transform(training_values)
-        model = KMeans(
+        model = MiniBatchKMeans(
             n_clusters=n_regimes,
-            n_init=10,
+            batch_size=max(batch_size, n_regimes),
+            max_iter=100,
+            n_init=3,
             random_state=random_state,
         )
         model.fit(scaled)
