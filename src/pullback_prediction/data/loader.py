@@ -25,6 +25,24 @@ PRICE_COLUMNS = (
 )
 
 
+
+def _parse_utc_timestamps(values: pd.Series) -> pd.Series:
+    """Parse text timestamps and Dukascopy Unix-millisecond timestamps."""
+    numeric = pd.to_numeric(values, errors="coerce")
+    numeric_mask = numeric.notna()
+    parsed = pd.Series(pd.NaT, index=values.index, dtype="datetime64[ns, UTC]")
+    if numeric_mask.any():
+        parsed.loc[numeric_mask] = pd.to_datetime(
+            numeric.loc[numeric_mask], unit="ms", utc=True, errors="coerce"
+        )
+    text_mask = ~numeric_mask
+    if text_mask.any():
+        parsed.loc[text_mask] = pd.to_datetime(
+            values.loc[text_mask], utc=True, errors="coerce"
+        )
+    return parsed
+
+
 class MarketDataError(ValueError):
     """Raised when source candles violate the market-data contract."""
 
@@ -62,7 +80,7 @@ def load_dukascopy_csv(path: str | Path, timeframe: str) -> pd.DataFrame:
         )
 
     frame = frame[list(required) + (["volume"] if "volume" in frame.columns else [])].copy()
-    frame["timestamp"] = pd.to_datetime(frame["timestamp"], utc=True, errors="coerce")
+    frame["timestamp"] = _parse_utc_timestamps(frame["timestamp"])
     if frame["timestamp"].isna().any():
         raise MarketDataError("Timestamp column contains invalid or missing values.")
 
@@ -142,9 +160,7 @@ def load_dukascopy_bid_ask_pair(
         result = raw[[time_column, *side_mapping]].rename(
             columns={time_column: "timestamp", **side_mapping}
         )
-        result["timestamp"] = pd.to_datetime(
-            result["timestamp"], utc=True, errors="coerce"
-        )
+        result["timestamp"] = _parse_utc_timestamps(result["timestamp"])
         if result["timestamp"].isna().any():
             raise MarketDataError(f"{side} file contains invalid timestamps.")
         price_columns = [f"{side}_{field}" for field in ("open", "high", "low", "close")]
