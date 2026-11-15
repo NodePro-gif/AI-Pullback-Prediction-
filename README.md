@@ -100,6 +100,13 @@ pullback-predict fit-regimes --input data/processed/XAUUSD_M1.parquet --output-d
 
 The command writes a reusable detector artifact and a parquet file with `regime_id` and `regime_distance`. Regime IDs are cluster identifiers, not guaranteed bullish/bearish labels.
 
+Train a leakage-aware stacked classifier. Base-model probabilities for the meta-learner are generated only from expanding-window out-of-fold predictions with a horizon-sized gap; the final base model is refit on 2015–2020, calibrated on 2021–2022, and evaluated on 2023:
+
+```bash
+pullback-predict train-stacked --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_stacked.joblib --timeframe M1 --n-splits 5 --horizon-bars 12
+pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_stacked.joblib --output data/processed/XAUUSD_M1_stacked_signals.parquet --timeframe M1
+```
+
 Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping, early stopping, batched validation to limit GPU memory, and automatic mixed precision on CUDA:
 
 ```python
