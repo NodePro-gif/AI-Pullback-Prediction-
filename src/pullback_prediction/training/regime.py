@@ -36,7 +36,7 @@ class RegimeDetector:
         feature_columns: tuple[str, ...] = DEFAULT_REGIME_FEATURES,
         random_state: int = 42,
         batch_size: int = 4096,
-    ) -> "RegimeDetector":
+    ) -> RegimeDetector:
         """Fit clusters using finite rows from the supplied training features."""
         if n_regimes < 2 or batch_size < 1:
             raise ValueError("n_regimes must be at least 2 and batch_size must be positive.")
