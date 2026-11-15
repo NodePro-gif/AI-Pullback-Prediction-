@@ -154,8 +154,8 @@ def test_walk_forward_cli_never_includes_final_test_partition(tmp_path, monkeypa
 
 
 def test_fit_regimes_cli_fits_only_training_partition(tmp_path, monkeypatch):
-    import numpy as np
     import joblib
+    import numpy as np
 
     from pullback_prediction import cli
     from pullback_prediction.training.regime import DEFAULT_REGIME_FEATURES
