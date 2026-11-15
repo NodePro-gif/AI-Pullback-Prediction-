@@ -41,7 +41,8 @@ def predict_frame(
             raise ValueError("timeframe must be M1 or M5.")
         if artifact_timeframe != timeframe:
             raise ValueError(
-                "Requested timeframe does not match model artifact; retrain or select the matching model."
+                "Requested timeframe does not match model artifact; "
+                "retrain or select the matching model."
             )
         if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
             raise ValueError("Candle index must contain timezone-aware timestamps.")
