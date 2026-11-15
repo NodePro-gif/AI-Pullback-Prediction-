@@ -14,11 +14,11 @@ Research-grade, probabilistic XAUUSD pullback prediction system. The initial tar
 
 ## Current implementation
 
-This repository is being built in verifiable stages. The first stage establishes the data contract, chronological splits, feature engineering, event labels, and tests. Model training, ensemble calibration, backtesting, API, dashboard, and deployment are subsequent integration stages.
+The first stage covers data contracts, chronological splits, causal features, barrier labels, and automated tests. A first HistGradientBoosting baseline is available for train/validation experiments. It fits only on training rows and creates labels separately within each partition so target horizons cannot cross split boundaries.
 
 ### Data contract
 
-Input CSV files must contain timestamp and bid/ask OHLC prices. Tick volume is optional. Timestamps are parsed as UTC and normalized to a consistent candle interval. Raw files are never overwritten.
+Input CSV files must contain timestamp and bid/ask OHLC prices. Tick volume is optional. Timestamps are parsed as UTC and normalized to a consistent candle interval. Raw files are never overwritten. Combined bid/ask files and separate bid and ask exports are supported.
 
 Accepted column aliases are documented in `src/pullback_prediction/data/loader.py`.
 
@@ -39,18 +39,26 @@ Validate a downloaded Dukascopy CSV:
 pullback-predict validate-data --input data/raw/XAUUSD_M1.csv --timeframe M1
 ```
 
-Create leakage-safe date partitions:
+Create chronological partitions:
 
 ```bash
 pullback-predict split-data --input data/processed/XAUUSD_M1.parquet --output-dir data/splits
 ```
 
+Train the baseline on 2015–2020 and evaluate on 2021–2023:
+
+```bash
+pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_m1_baseline.joblib
+```
+
+The command writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is excluded. Run separately for M5 data.
+
 ## Planned architecture
 
 1. **Data:** Dukascopy bid/ask ingestion, integrity checks, resampling, spread and session metadata.
 2. **Features:** trend, volatility, momentum, candle geometry, market structure and liquidity proxies, calculated causally.
-3. **Labels:** future-pathrier event labels with configurable horizon and barriers; no future data enters features.
-4. **Models:** gradient-boosted tabular model, sequence LSTM and Transformer, regime detector, calibrated meta-learner.
+3. **Labels:** future-path first-touch event labels; labels are partitioned before fitting to prevent horizon overlap.
+4. **Models:** gradient-boosted tabular baseline, sequence LSTM and Transformer, regime detector, calibrated meta-learner.
 5. **Decision:** BUY / SELL / WAIT with calibrated probabilities, expected value, uncertainty and risk levels.
 6. **Evaluation:** chronological holdout, walk-forward tests, spread/slippage/commission-aware backtests and benchmark comparisons.
 7. **Serving:** FastAPI prediction service and Streamlit research dashboard.
@@ -62,4 +70,4 @@ There is no broker execution module. No credentials are requested or stored. Any
 
 ## Status
 
-See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for verified, pending, and blocked work. A component is not marked verified until its checks have actually been run.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for verified, pending, and unverified work.
