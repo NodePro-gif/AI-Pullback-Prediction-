@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 from datetime import datetime
-from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
@@ -51,11 +50,6 @@ class Prediction(BaseModel):
     atr_14: float | None
 
 
-@lru_cache(maxsize=2)
-def _load_predictions_cache_key(path: str, modified: float) -> str:
-    return path
-
-
 @app.get("/health")
 def health() -> dict[str, Any]:
     return {
@@ -69,8 +63,8 @@ def health() -> dict[str, Any]:
 def predict(request: PredictionRequest) -> list[Prediction]:
     if not MODEL_PATH.is_file():
         raise HTTPException(status_code=503, detail="Model artifact is not configured.")
-    frame = pd.DataFrame([item.model_dump() for item in request.candles])
-    frame = frame.set_index("timestamp").sort_index()
+    frame = pd.DataFrame([item.dict() for item in request.candles])
+    frame = frame.set_index("timestamp")
     if frame.index.has_duplicates:
         raise HTTPException(status_code=422, detail="Candle timestamps must be unique.")
     if not frame.index.is_monotonic_increasing:
