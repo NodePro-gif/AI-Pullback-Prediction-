@@ -108,7 +108,11 @@ def walk_forward_evaluate(
             np.mean([fold["balanced_accuracy"] for fold in fold_results])
         ),
         "mean_log_loss": (
-            float(np.mean([fold["log_loss"] for fold in fold_results if fold["log_loss"] is not None]))
+            float(
+                np.mean(
+                    [fold["log_loss"] for fold in fold_results if fold["log_loss"] is not None]
+                )
+            )
             if any(fold["log_loss"] is not None for fold in fold_results)
             else None
         ),
