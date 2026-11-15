@@ -70,10 +70,10 @@ pullback-predict split-data --input data/processed/XAUUSD_M1.parquet --output-di
 Train the baseline on 2015–2020 and evaluate on 2021–2023:
 
 ```bash
-pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_m1_baseline.joblib
+pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_m1_baseline.joblib --timeframe M1
 ```
 
-The command fits on 2015–2020, fits one-vs-rest isotonic calibrators on 2021–2022, and reports holdout metrics on 2023. It writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is not accessed. Run separately for M5 data.
+The command fits on 2015–2020, fits one-vs-rest isotonic calibrators on 2021–2022, and reports holdout metrics on 2023. It writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is not accessed. Run separately for M5 data with `--timeframe M5` and a distinct artifact path. Training artifacts record their timeframe; prediction, dashboard, and API reject mismatched candle intervals or artifacts.
 
 Run expanding-window walk-forward evaluation on development data (2015–2023). The horizon-sized gap is enforced before invalid rows are removed, and 2024+ is excluded:
 
@@ -142,7 +142,7 @@ The API exposes `GET /health` and `POST /predict`; it has no broker or order end
 Generate out-of-sample or validation predictions from a saved model. New artifacts apply the 2021–2022 isotonic calibrators before the abstention threshold; older artifacts without calibrators use raw model scores:
 
 ```bash
-pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_baseline.joblib --output data/processed/XAUUSD_M1_signals.parquet --min-probability 0.60
+pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_baseline.joblib --output data/processed/XAUUSD_M1_signals.parquet --min-probability 0.60 --timeframe M1
 ```
 
 Then backtest the resulting parquet, which contains `signal` (-1 short, 0 wait, +1 long) and `atr_14` alongside bid/ask OHLC:
