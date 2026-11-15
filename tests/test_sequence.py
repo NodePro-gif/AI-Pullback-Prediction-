@@ -54,3 +54,42 @@ def test_sequence_model_architectures_forward_pass_when_torch_is_available():
             max_sequence_length=16,
         )
         assert model(values).shape == (4, 3)
+
+
+def test_sequence_training_runs_batched_validation_when_torch_is_available():
+    pytest.importorskip("torch")
+    from pullback_prediction.training.sequence import (
+        build_sequence_model,
+        train_sequence_model,
+    )
+
+    rng = np.random.default_rng(7)
+    train_x = rng.normal(size=(24, 8, 4)).astype(np.float32)
+    train_y = np.tile(np.array([-1, 0, 1]), 8)
+    validation_x = rng.normal(size=(11, 8, 4)).astype(np.float32)
+    validation_y = np.tile(np.array([-1, 0, 1]), 4)[:11]
+    model = build_sequence_model(
+        "lstm",
+        n_features=4,
+        n_classes=3,
+        hidden_dim=8,
+        num_layers=1,
+    )
+
+    result = train_sequence_model(
+        model,
+        train_x,
+        train_y,
+        validation_x,
+        validation_y,
+        epochs=2,
+        batch_size=4,
+        patience=2,
+        device="cpu",
+    )
+
+    assert result["device"] == "cpu"
+    assert result["mixed_precision"] is False
+    assert result["classes"] == [-1, 0, 1]
+    assert result["epochs_completed"] >= 1
+    assert np.isfinite(result["best_validation_loss"])
