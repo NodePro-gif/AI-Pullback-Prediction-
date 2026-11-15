@@ -1,0 +1,58 @@
+import joblib
+import numpy as np
+import pandas as pd
+
+from pullback_prediction.features.technical import build_features
+from pullback_prediction.training.inference import predict_frame
+
+
+class FixedProbabilityModel:
+    classes_ = np.array([-1, 0, 1])
+
+    def predict_proba(self, features):
+        return np.tile(np.array([[0.70, 0.20, 0.10]]), (len(features), 1))
+
+
+def sample_candles():
+    index = pd.date_range("2024-01-01", periods=220, freq="min", tz="UTC")
+    close = 2000 + np.arange(len(index), dtype=float) * 0.02
+    frame = pd.DataFrame(index=index)
+    for side, offset in (("bid", 0.0), ("ask", 0.2)):
+        frame[f"{side}_open"] = close + offset
+        frame[f"{side}_high"] = close + offset + 0.1
+        frame[f"{side}_low"] = close + offset - 0.1
+        frame[f"{side}_close"] = close + offset
+    return frame
+
+
+def test_predict_frame_maps_class_probabilities_to_buy_sell_wait(tmp_path):
+    candles = sample_candles()
+    columns = list(build_features(candles).columns)
+    artifact = tmp_path / "model.joblib"
+    joblib.dump(
+        {"model": FixedProbabilityModel(), "feature_columns": columns},
+        artifact,
+    )
+
+    result = predict_frame(candles, artifact, min_probability=0.65)
+
+    assert result["signal"].eq(-1).all()
+    assert result["predicted_class"].eq(-1).all()
+    assert result["confidence"].eq(0.70).all()
+    assert result["prob_sell"].eq(0.70).all()
+    assert result["prob_wait"].eq(0.20).all()
+    assert result["prob_buy"].eq(0.10).all()
+
+
+def test_predict_frame_abstains_when_confidence_is_below_threshold(tmp_path):
+    candles = sample_candles()
+    columns = list(build_features(candles).columns)
+    artifact = tmp_path / "model.joblib"
+    joblib.dump(
+        {"model": FixedProbabilityModel(), "feature_columns": columns},
+        artifact,
+    )
+
+    result = predict_frame(candles, artifact, min_probability=0.80)
+
+    assert result["signal"].eq(0).all()
