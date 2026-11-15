@@ -52,6 +52,15 @@ def predict_frame(
             raise ValueError(
                 "Requested timeframe does not match model artifact; retrain or select the matching model."
             )
+        if not isinstance(candles.index, pd.DatetimeIndex):
+            raise ValueError("Candle data must use a DatetimeIndex.")
+        seconds = 60 if timeframe == "M1" else 300
+        intervals = candles.index.to_series().diff().dt.total_seconds()
+        intervals = intervals[(intervals > 0) & (intervals <= seconds * 15)]
+        if intervals.empty or not np.isclose(intervals.median(), seconds, atol=1):
+            raise ValueError(
+                f"Candle timestamps do not match the requested {timeframe} timeframe."
+            )
     if model is None or not feature_columns:
         raise ValueError("Model artifact must contain model and feature_columns.")
 
