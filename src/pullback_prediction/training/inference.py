@@ -13,6 +13,88 @@ from pullback_prediction.features.technical import build_features
 from pullback_prediction.training.calibration import apply_probability_calibrators
 
 
+def _predict_sequence_artifact(
+    candles: pd.DataFrame,
+    artifact: dict[str, Any],
+    artifact_path: Path,
+    min_probability: float,
+) -> pd.DataFrame:
+    """Load a saved PyTorch sequence checkpoint and align predictions to candles."""
+    try:
+        import torch
+    except ImportError as exc:
+        raise ImportError(
+            "Install optional PyTorch dependencies: pip install -e '.[deep-learning]'"
+        ) from exc
+
+    from pullback_prediction.training.sequence import (
+        build_sequence_model,
+        make_sequence_windows,
+    )
+
+    columns = artifact.get("feature_columns")
+    if not columns:
+        raise ValueError("Sequence artifact has no feature_columns.")
+    features = build_features(candles)
+    missing = set(columns).difference(features.columns)
+    if missing:
+        raise ValueError(f"Missing model features: {', '.join(sorted(missing))}")
+    scaled = pd.DataFrame(
+        artifact["scaler"].transform(features.loc[:, columns]),
+        index=features.index,
+        columns=columns,
+    )
+    dummy_labels = pd.Series(0, index=scaled.index)
+    windows = make_sequence_windows(
+        scaled, dummy_labels, sequence_length=int(artifact["sequence_length"])
+    )
+    classes = np.asarray(artifact["classes"], dtype=int)
+    result = pd.DataFrame(
+        {
+            "signal": np.zeros(len(candles), dtype="int8"),
+            "predicted_class": np.zeros(len(candles), dtype="int8"),
+            "confidence": np.zeros(len(candles), dtype=float),
+            "probabilities_calibrated": bool(artifact.get("calibrators") is not None),
+            "prob_sell": np.zeros(len(candles), dtype=float),
+            "prob_wait": np.zeros(len(candles), dtype=float),
+            "prob_buy": np.zeros(len(candles), dtype=float),
+            "atr_14": features["atr_14"],
+        },
+        index=candles.index,
+    )
+    if not len(windows.features):
+        return result
+    model = build_sequence_model(**artifact["model_config"])
+    weights_path = artifact_path.parent / artifact["weights_path"]
+    checkpoint = torch.load(weights_path, map_location="cpu", weights_only=True)
+    model.load_state_dict(checkpoint["state_dict"])
+    model.eval()
+    with torch.inference_mode():
+        tensor = torch.as_tensor(windows.features, dtype=torch.float32)
+        probabilities = torch.softmax(model(tensor).float(), dim=1).numpy()
+    calibrators = artifact.get("calibrators")
+    if calibrators is not None:
+        calibration_classes = np.asarray(artifact["calibration_classes"], dtype=int)
+        if not np.array_equal(calibration_classes, classes):
+            raise ValueError("Calibration classes do not match sequence model classes.")
+        probabilities = apply_probability_calibrators(probabilities, calibrators)
+    best = probabilities.argmax(axis=1)
+    predicted = classes[best]
+    confidence = probabilities.max(axis=1)
+    positions = candles.index.get_indexer(windows.timestamps)
+    result.iloc[positions, result.columns.get_loc("predicted_class")] = predicted
+    result.iloc[positions, result.columns.get_loc("confidence")] = confidence
+    result.iloc[positions, result.columns.get_loc("signal")] = np.where(
+        (confidence >= min_probability) & (predicted != 0), predicted, 0
+    ).astype("int8")
+    probability_columns = {-1: "prob_sell", 0: "prob_wait", 1: "prob_buy"}
+    for column, class_value in enumerate(classes):
+        name = probability_columns.get(int(class_value))
+        if name is not None:
+            result.iloc[positions, result.columns.get_loc(name)] = probabilities[:, column]
+    return result
+
+
 def predict_frame(
     candles: pd.DataFrame,
     artifact_path: str | Path,
@@ -33,6 +115,10 @@ def predict_frame(
         raise ValueError("timeframe must be M1 or M5.")
 
     artifact: dict[str, Any] = joblib.load(artifact_path)
+    if artifact.get("artifact_type") == "sequence_classifier":
+        return _predict_sequence_artifact(
+            candles, artifact, Path(artifact_path), min_probability
+        )
     model = artifact.get("model")
     feature_columns = artifact.get("feature_columns")
     artifact_timeframe = artifact.get("timeframe")
