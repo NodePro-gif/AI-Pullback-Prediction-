@@ -69,6 +69,13 @@ def build_features(frame: pd.DataFrame) -> pd.DataFrame:
         alpha=1 / 14, adjust=False, min_periods=14
     ).mean()
     result["atr_pct"] = result["atr_14"] / close
+    result["trend_strength_20_50"] = (
+        result["ema_20"] - result["ema_50"]
+    ) / result["atr_14"]
+    result["trend_strength_50_200"] = (
+        result["ema_50"] - result["ema_200"]
+    ) / result["atr_14"]
+    result["atr_change_5"] = result["atr_14"] / result["atr_14"].shift(5) - 1
 
     for window in (5, 15, 30, 60):
         result[f"volatility_{window}"] = close.pct_change().rolling(
@@ -79,6 +86,17 @@ def build_features(frame: pd.DataFrame) -> pd.DataFrame:
              - low.rolling(window, min_periods=window).min())
             / result["atr_14"]
         )
+
+    result["volatility_ratio_5_60"] = (
+        result["volatility_5"] / result["volatility_60"].replace(0, np.nan)
+    )
+
+    spread_mean = result["spread"].rolling(30, min_periods=30).mean()
+    spread_std = result["spread"].rolling(30, min_periods=30).std()
+    result["spread_zscore_30"] = (
+        (result["spread"] - spread_mean) / spread_std.replace(0, np.nan)
+    )
+    result["spread_to_atr"] = result["spread"] / result["atr_14"]
 
     candle_range = (high - low).replace(0, np.nan)
     result["body_to_range"] = (close - result["mid_open"]) / candle_range
@@ -96,6 +114,12 @@ def build_features(frame: pd.DataFrame) -> pd.DataFrame:
         volume_std = volume.rolling(30, min_periods=30).std()
         result["volume_zscore_30"] = (volume - volume_mean) / volume_std.replace(0, np.nan)
 
-    result["hour_utc"] = result.index.hour
-    result["day_of_week_utc"] = result.index.dayofweek
+    hour = result.index.hour + result.index.minute / 60.0
+    day = result.index.dayofweek
+    result["hour_utc"] = hour
+    result["day_of_week_utc"] = day
+    result["hour_sin"] = np.sin(2 * np.pi * hour / 24)
+    result["hour_cos"] = np.cos(2 * np.pi * hour / 24)
+    result["day_of_week_sin"] = np.sin(2 * np.pi * day / 7)
+    result["day_of_week_cos"] = np.cos(2 * np.pi * day / 7)
     return result.replace([np.inf, -np.inf], np.nan)
