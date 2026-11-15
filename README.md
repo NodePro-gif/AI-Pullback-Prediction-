@@ -107,7 +107,7 @@ pullback-predict train-stacked --input data/processed/XAUUSD_M1.parquet --output
 pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_stacked.joblib --output data/processed/XAUUSD_M1_stacked_signals.parquet --timeframe M1
 ```
 
-Train an end-to-end LSTM or Transformer sequence model. The pipeline fits its feature scaler on training rows only, trains on 2015–2020, uses 2021–2022 for early stopping and probability calibration, and reports 2023 evaluation metrics. It never opens 2024+ final-test rows. PyTorch is optional:
+Train an end-to-end LSTM or Transformer sequence model. The pipeline fits its feature scaler on training rows only, trains on 2015–2020, uses 2021 for early stopping and 2022 for probability calibration, and reports 2023 evaluation metrics. It never opens 2024+ final-test rows. PyTorch is optional:
 
 ```bash
 pip install -e ".[deep-learning]"
@@ -122,7 +122,7 @@ Each run writes a joblib metadata artifact, a sibling `.pt` model checkpoint, an
 pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_m1_lstm.joblib --output data/processed/XAUUSD_M1_lstm_signals.parquet --timeframe M1
 ```
 
-Sequence inference aligns each prediction to the final candle in its trailing window; the initial warm-up rows abstain with WAIT. GPU execution and full-history model quality still require measurement on the target runtime and real Dukascopy data.
+Sequence inference aligns each prediction to the final candle in its trailing window; the initial warm-up rows abstain with WAIT. CPU PyTorch sequence and inference tests run in a dedicated CI job. GPU execution and full-history model quality still require measurement on the target runtime and real Dukascopy data.
 
 ## Research dashboard and API
 
