@@ -16,7 +16,7 @@ class FixedProbabilityModel:
 
 def sample_candles(timeframe="M1"):
     frequency = "min" if timeframe == "M1" else "5min"
-    index = pd.date_range("2024-01-01", periods=220, freq=frequency, tz="UTC")
+    index = pd.date_range("2024-01-01", periods=600, freq=frequency, tz="UTC")
     close = 2000 + np.arange(len(index), dtype=float) * 0.02
     frame = pd.DataFrame(index=index)
     for side, offset in (("bid", 0.0), ("ask", 0.2)):
