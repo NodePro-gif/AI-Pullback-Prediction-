@@ -95,7 +95,7 @@ def build_sequence_model(
             else:
                 layer = nn.TransformerEncoderLayer(
                     d_model=hidden_dim,
-                    nhead=4 if hidden_dim % 4 == 0 else 2,
+                    nhead=4 if hidden_dim % 4 == 0 else 2 if hidden_dim % 2 == 0 else 1,
                     dim_feedforward=hidden_dim * 4,
                     dropout=dropout,
                     batch_first=True,
@@ -172,16 +172,23 @@ def train_sequence_model(
     model = model.to(target_device)
 
     unique, counts = np.unique(train_y.astype(int), return_counts=True)
-    weights = np.ones(int(max(unique.max(), 2)) + 1, dtype=np.float32)
-    for label, count in zip(unique, counts, strict=True):
-        weights[int(label)] = len(train_y) / (len(unique) * count)
+    class_map = {int(value): index for index, value in enumerate(unique)}
+    if not set(np.unique(validation_y.astype(int))).issubset(class_map):
+        raise ValueError("Validation labels contain a class absent from training.")
+    mapped_train = np.asarray([class_map[int(value)] for value in train_y], dtype=np.int64)
+    mapped_validation = np.asarray(
+        [class_map[int(value)] for value in validation_y], dtype=np.int64
+    )
+    weights = len(train_y) / (len(unique) * counts.astype(np.float32))
     class_weights = torch.as_tensor(weights, device=target_device)
     train_dataset = TensorDataset(
         torch.as_tensor(train_x, dtype=torch.float32),
-        torch.as_tensor(train_y, dtype=torch.long),
+        torch.as_tensor(mapped_train, dtype=torch.long),
     )
     validation_values = torch.as_tensor(validation_x, dtype=torch.float32, device=target_device)
-    validation_targets = torch.as_tensor(validation_y, dtype=torch.long, device=target_device)
+    validation_targets = torch.as_tensor(
+        mapped_validation, dtype=torch.long, device=target_device
+    )
     generator = torch.Generator().manual_seed(seed)
     loader = DataLoader(
         train_dataset,
@@ -245,5 +252,5 @@ def train_sequence_model(
         "history": history,
         "best_validation_loss": best_loss,
         "epochs_completed": len(history),
-        "device": str(target_device),
+        "device": str(target_device),\n        "classes": [int(value) for value in unique],
     }
