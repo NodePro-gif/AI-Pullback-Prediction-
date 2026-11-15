@@ -163,7 +163,7 @@ The simulator enters at the next candle open, uses ask for long entries and bid 
 ## Planned architecture
 
 1. **Data:** Dukascopy bid/ask ingestion, integrity checks, resampling, spread and session metadata.
-2. **Features:** trend, volatility, momentum, candle geometry, market structure and liquidity proxies, calculated causally.
+2. **Features:** trend strength across EMA horizons, ATR-normalized trend, multi-horizon realized volatility, ATR changes, bid/ask spread z-scores and spread-to-ATR, candle geometry, volume context when available, and cyclical UTC session features. All are calculated causally from current and past candles.
 3. **Labels:** future-path first-touch event labels; labels are partitioned before fitting to prevent horizon overlap.
 4. **Models:** gradient-boosted tabular baseline, sequence LSTM and Transformer, regime detector, calibrated meta-learner.
 5. **Decision:** BUY / SELL / WAIT with calibrated probabilities, expected value, uncertainty and risk levels.
