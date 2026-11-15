@@ -2,8 +2,6 @@ import numpy as np
 import pandas as pd
 import pytest
 
-fastapi = pytest.importorskip("fastapi")
-
 from pullback_prediction.api import app as api
 
 
