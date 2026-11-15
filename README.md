@@ -137,7 +137,14 @@ Start the read-only API after placing a trained artifact at the configured path:
 PULLBACK_MODEL_PATH=artifacts/xauusd_baseline.joblib uvicorn pullback_prediction.api.app:app --host 0.0.0.0 --port 8000
 ```
 
-The API exposes `GET /health` and `POST /predict`; it has no broker or order endpoint. Build and run the container with the model artifact mounted read-only:\n\n```bash\ndocker build -t pullback-api .\ndocker run --rm -p 8000:8000 -v "$PWD/artifacts:/app/artifacts:ro" pullback-api\n```\n\nDo not expose the research API publicly without adding authentication, TLS, rate limits, and operational monitoring.
+The API exposes `GET /health` and `POST /predict`; it has no broker or order endpoint. Build and run the container with the model artifact mounted read-only:
+
+```bash
+docker build -t pullback-api .
+docker run --rm -p 8000:8000 -v "$PWD/artifacts:/app/artifacts:ro" pullback-api
+```
+
+Do not expose the research API publicly without adding authentication, TLS, rate limits, and operational monitoring.
 
 Generate out-of-sample or validation predictions from a saved model. New artifacts apply the 2021–2022 isotonic calibrators before the abstention threshold; older artifacts without calibrators use raw model scores:
 
