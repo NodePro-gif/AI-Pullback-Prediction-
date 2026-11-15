@@ -6,15 +6,16 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 |---|---|---|
 | Repository and project contract | verified | README and hard constraints committed |
 | Python package metadata and dependencies | implemented, unverified | CI dependency installation |
-| CLI for validation, splitting, and baseline training | implemented, unverified | CI plus CLI smoke test |
-| Cost-aware bid/ask backtest engine | verified | Hand-calculated long/short, slippage, commission, and conservative same-bar stop tests pass in CI |
+| CLI for validation, splitting, training, prediction, and backtesting | implemented, unverified | CI plus CLI smoke test |
+| Cost-aware bid/ask backtest engine | implemented, unverified | Long/short fills, costs, ambiguous bars, drawdown tests; latest CI pending |
 | Backtest CLI | implemented, unverified | CLI smoke test and real-data run pending |
 | Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI |
 | Separate Dukascopy bid/ask file ingestion | verified | Paired-file alignment tests pass in CI |
 | Fixed chronological partitions | verified | Boundary tests pass in CI |
 | Causal technical/microstructure features | verified | Future-perturbation leakage test passes in CI |
 | ATR first-touch barrier labels | verified | First-touch, ambiguous-bar and censoring tests pass in CI |
-| HistGradientBoosting baseline | implemented, unverified | Train-only fitting and validation metrics; CI pending |
+| HistGradientBoosting baseline | verified | 14 tests and Ruff pass on Python 3.11/3.12; full market-data training run pending |
+| Model inference and confidence abstention | implemented, unverified | Probability mapping and abstention tests in CI pending |
 | XGBoost baseline | pending | Later model comparison candidate |
 | LSTM and Transformer | pending | Sequence windows, masks, reproducibility and walk-forward checks |
 | Regime detector and meta-learner | pending | Walk-forward calibration tests |
