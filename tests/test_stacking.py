@@ -67,9 +67,9 @@ def test_stacked_classifier_rejects_feature_schema_changes():
 def test_stacked_training_labels_each_period_without_crossing_boundaries(
     tmp_path, monkeypatch
 ):
+    from pullback_prediction.data.splits import chronological_split
     from pullback_prediction.labels import barriers
     from pullback_prediction.training import calibration, stacking
-    from pullback_prediction.data.splits import chronological_split
 
     train_index = pd.date_range("2015-01-01", periods=220, freq="min", tz="UTC")
     calibration_index = pd.date_range(
@@ -105,7 +105,11 @@ def test_stacked_training_labels_each_period_without_crossing_boundaries(
         "pullback_prediction.features.technical.build_features", fake_features
     )
     monkeypatch.setattr(barriers, "make_barrier_labels", fake_labels)
-    monkeypatch.setattr(stacking.StackedPullbackClassifier, "fit", lambda *args, **kwargs: FakeStack())
+    monkeypatch.setattr(
+        stacking.StackedPullbackClassifier,
+        "fit",
+        lambda *args, **kwargs: FakeStack(),
+    )
     monkeypatch.setattr(
         calibration,
         "fit_probability_calibrators",
