@@ -152,10 +152,14 @@ def walk_forward_command(
 @app.command("benchmark-models")
 def benchmark_models_command(
     input: Path = typer.Option(..., "--input", exists=True, readable=True),
-    output_dir: Path = typer.Option(Path("artifacts/model_benchmark"), "--output-dir"),
+    output_dir: Path = typer.Option(
+        Path("artifacts/model_benchmark"), "--output-dir"
+    ),
     n_splits: int = typer.Option(5, "--n-splits", min=2),
     horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
-    barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
+    barrier_atr_multiple: float = typer.Option(
+        1.5, "--barrier-atr-multiple", min=0.01
+    ),
     gap_bars: int | None = typer.Option(None, "--gap-bars", min=0),
     max_iter: int = typer.Option(200, "--max-iter", min=1),
     include_xgboost: bool = typer.Option(True, "--xgboost/--no-xgboost"),
@@ -165,7 +169,9 @@ def benchmark_models_command(
     partitions = chronological_split(frame)
     development = pd.concat([partitions["train"], partitions["validation"]])
     if development.empty:
-        raise typer.BadParameter("No development data exists before final-test period.")
+        raise typer.BadParameter(
+            "No development data exists before final-test period."
+        )
     effective_gap = horizon_bars if gap_bars is None else gap_bars
     if effective_gap < horizon_bars:
         raise typer.BadParameter("gap-bars must be at least horizon-bars.")
@@ -186,13 +192,16 @@ def benchmark_models_command(
     )
     output_dir.mkdir(parents=True, exist_ok=True)
     (output_dir / "summary.json").write_text(
-        json.dumps(result["summary"], indent=2, sort_keys=True, allow_nan=False) + "\\n",
+        json.dumps(
+            result["summary"], indent=2, sort_keys=True, allow_nan=False
+        )
+        + "\n",
         encoding="utf-8",
     )
     for name, folds in result["folds"].items():
         pd.DataFrame(folds).to_csv(output_dir / f"{name}_folds.csv", index=False)
     (output_dir / "skipped.json").write_text(
-        json.dumps(result["skipped"], indent=2, sort_keys=True) + "\\n",
+        json.dumps(result["skipped"], indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     typer.echo(f"output_dir={output_dir}")
