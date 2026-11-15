@@ -7,6 +7,8 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | Repository and project contract | verified | README and hard constraints committed |
 | Python package metadata and dependencies | implemented, unverified | CI dependency installation |
 | CLI for validation, splitting, and baseline training | implemented, unverified | CI plus CLI smoke test |
+| Cost-aware bid/ask backtest engine | verified | Hand-calculated long/short, slippage, commission, and conservative same-bar stop tests pass in CI |
+| Backtest CLI | implemented, unverified | CLI smoke test and real-data run pending |
 | Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI |
 | Separate Dukascopy bid/ask file ingestion | verified | Paired-file alignment tests pass in CI |
 | Fixed chronological partitions | verified | Boundary tests pass in CI |
