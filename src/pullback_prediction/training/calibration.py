@@ -6,6 +6,16 @@ import numpy as np
 from sklearn.isotonic import IsotonicRegression
 
 
+
+def _validate_probability_matrix(probabilities: np.ndarray) -> None:
+    if not np.isfinite(probabilities).all():
+        raise ValueError("Probabilities must be finite.")
+    if (probabilities < 0.0).any() or (probabilities > 1.0).any():
+        raise ValueError("Probabilities must lie between 0 and 1.")
+    if not np.allclose(probabilities.sum(axis=1), 1.0, atol=1e-6):
+        raise ValueError("Probability rows must sum to 1.")
+
+
 def fit_probability_calibrators(
     probabilities: np.ndarray,
     labels: np.ndarray,
@@ -19,8 +29,11 @@ def fit_probability_calibrators(
         raise ValueError("Probability columns must match the supplied classes.")
     if len(labels) != len(probabilities):
         raise ValueError("Probability and label row counts must match.")
-    if not np.isfinite(probabilities).all():
-        raise ValueError("Probabilities must be finite.")
+    _validate_probability_matrix(probabilities)
+    if classes.ndim != 1 or len(np.unique(classes)) != len(classes):
+        raise ValueError("Classes must be a one-dimensional unique array.")
+    if not np.isin(labels, classes).all():
+        raise ValueError("Labels must belong to the supplied classes.")
 
     calibrators: list[IsotonicRegression | None] = []
     for column, class_value in enumerate(classes):
@@ -48,8 +61,7 @@ def apply_probability_calibrators(
         raise ValueError(
             "Probability columns and calibrators must have the same number of columns."
         )
-    if not np.isfinite(probabilities).all():
-        raise ValueError("Probabilities must be finite.")
+    _validate_probability_matrix(probabilities)
 
     calibrated = np.empty_like(probabilities)
     for column, calibrator in enumerate(calibrators):
