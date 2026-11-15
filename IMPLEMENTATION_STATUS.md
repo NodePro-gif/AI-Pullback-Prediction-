@@ -4,39 +4,30 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 
 | Component | Status | Evidence / next check |
 |---|---|---|
-| Repository and project contract | verified | README and hard constraints committed |
-| Python package metadata and dependencies | implemented, unverified | CI dependency installation |
-| CLI for downloading, validation, Parquet preparation, splitting, training, prediction, walk-forward evaluation, and backtesting | implemented, unverified | Prepare-data and backtest smoke tests pass; walk-forward CLI test pending |
-| Cost-aware bid/ask backtest engine | verified | Long/short fills, costs, ambiguous bars, and drawdown tests pass in CI |
-| Backtest CLI | verified | Parquet-to-trades/summary smoke test passes; real-data run pending |
-| Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI, including Unix-millisecond timestamps |
-| Dukascopy bid/ask downloader | implemented, unverified | Pinned 1.51.1 CLI arguments, cache/retry flags, and no-overwrite tests pass; live network download pending |
-| Bid/ask CSV to Parquet preparation | verified | CLI smoke test validates numeric-millisecond timestamps and writes UTC Parquet |
-| Separate Dukascopy bid/ask file ingestion | verified | Paired-file alignment tests pass in CI |
-| Fixed chronological partitions | verified | Boundary tests pass in CI |
-| Causal technical/microstructure features | verified | Future-perturbation leakage test passes in CI |
-| ATR first-touch barrier labels | verified | First-touch, ambiguous-bar and censoring tests pass in CI |
-| HistGradientBoosting baseline | implemented, unverified at data scale | Fit on 2015–2020; full Dukascopy training run pending |
-| Model inference and confidence abstention | verified | Calibrated probability mapping and abstention tests pass in CI |
-| XGBoost baseline | pending | Later model comparison candidate |
-| LSTM and Transformer | pending | Sequence windows, masks, reproducibility and walk-forward checks |
-| Regime detector and meta-learner | pending | Walk-forward calibration tests |
-| Isotonic probability calibration | verified | Fit on 2021–2022 and evaluate on 2023; probability simplex and inference tests pass |
-| Calibrated WAIT/abstention policy | implemented, unverified at data scale | Configurable confidence threshold; calibration and backtest analysis on real data pending |
-| Expanding-window walk-forward evaluation | verified | Chronological TimeSeriesSplit folds, candle-based leakage gap and unit tests pass |
-| Walk-forward CLI | implemented, unverified | CLI test excludes 2024+ final test rows; latest CI pending |
-| Cost-aware backtester | pending | Hand-calculated bid/ask trade fixtures |
-| FastAPI service | pending | API contract tests |
-| Streamlit dashboard | pending | Launch and smoke test |
-| Docker/VPS deployment | pending | Container build and health check |
+| Repository contract and chronological data policy | verified | README and fixed date boundaries committed |
+| Dukascopy bid/ask loader and downloader | implemented, unverified at scale | CSV, timestamp, alignment, retry/cache tests pass; full historical download pending |
+| Parquet preparation and chronological splitting | verified | CLI conversion and boundary tests pass |
+| Causal technical features and ATR first-touch labels | verified | Future-perturbation, first-touch, ambiguous-bar and censoring tests |
+| HistGradientBoosting baseline | verified in unit tests | Full 2015–2020 market-data fit pending |
+| Isotonic calibration and inference abstention | verified in unit tests | Calibration on 2021–2022; holdout evaluation on 2023 |
+| Expanding-window walk-forward | verified in unit tests | Candle gap enforced before invalid-row filtering; final-test partition excluded |
+| HistGradientBoosting / XGBoost benchmark | implemented, verification pending | Same folds and metrics; optional XGBoost dependency; CI run pending |
+| Bid/ask cost-aware backtester | verified in unit tests | Next-open entries, adverse slippage, commission, stop-first collisions |
+| CLI workflow | implemented, verification pending | Download, validate, prepare, split, train, predict, walk-forward, benchmark, backtest |
+| FastAPI inference service | implemented, verification pending | Read-only /health and /predict endpoints; no order execution |
+| Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
+| Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
+| LSTM / Transformer sequence training | pending | Needs explicit sequence-window training, GPU memory controls and walk-forward validation |
+| Regime detector and meta-learner | pending | Requires out-of-fold predictions and separate calibration |
+| Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
 
 ## Hard constraints
 
-- Instrument: XAUUSD.
-- Timeframes: M1 and M5.
+- Instrument: XAUUSD; timeframes M1 and M5.
 - Canonical data: Dukascopy bid and ask.
 - Training: 2015–2020 only.
-- Validation: 2021–2023 only.
-- Final test: 2024 onward; excluded from training and model selection.
-- Outputs: BUY / SELL / WAIT.
-- No broker order execution; live trading remains disabled.
+- Calibration: 2021–2022; validation/evaluation: 2023.
+- Final test: 2024 onward; never used for training, calibration or model selection.
+- Output: BUY / SELL / WAIT.
+- No broker credentials, order execution or live trading.
+- Report measured results only; never promise zero loss, zero perplexity, or a guaranteed win rate.
