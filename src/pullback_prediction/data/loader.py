@@ -112,7 +112,7 @@ def load_dukascopy_csv(path: str | Path, timeframe: str) -> pd.DataFrame:
     frame = frame.set_index("timestamp").sort_index()
     if frame.index.has_duplicates:
         raise MarketDataError("Duplicate candle timestamps detected.")
-    expected = pd.Timedelta("1min" if timeframe == "M1" else "5min")
+    expected = pd.Timedelta(60 if timeframe == "M1" else 300, unit="s")
     gaps = frame.index.to_series().diff().dropna()
     if (gaps < expected).any():
         raise MarketDataError("Rows are more frequent than the selected timeframe.")
@@ -194,7 +194,7 @@ def load_dukascopy_bid_ask_pair(
     if (result["ask_close"] < result["bid_close"]).any():
         raise MarketDataError("Ask close is below bid close; check source files.")
 
-    expected = pd.Timedelta(minutes=1 if timeframe == "M1" else 5)
+    expected = pd.Timedelta(60 if timeframe == "M1" else 300, unit="s")
     gaps = result.index.to_series().diff().dropna()
     if (gaps < expected).any():
         raise MarketDataError("Rows are more frequent than the selected timeframe.")
