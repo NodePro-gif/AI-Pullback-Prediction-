@@ -6,11 +6,11 @@ from pathlib import Path
 import pandas as pd
 import typer
 
+from pullback_prediction.backtesting.engine import backtest_signals
 from pullback_prediction.data.loader import (
     load_dukascopy_bid_ask_pair,
     load_dukascopy_csv,
 )
-from pullback_prediction.backtesting.engine import backtest_signals
 from pullback_prediction.data.splits import chronological_split
 from pullback_prediction.training.baseline import train_baseline_from_frame
 
