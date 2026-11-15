@@ -150,12 +150,18 @@ def load_dukascopy_bid_ask_pair(
         price_columns = [f"{side}_{field}" for field in ("open", "high", "low", "close")]
         for column in price_columns:
             result[column] = pd.to_numeric(result[column], errors="coerce")
-        if result[price_columns].isna().any().any() or (result[price_columns] <= 0).any().any():
-            raise MarketDataError(f"{side} file contains missing, non-numeric, or non-positive prices.")
-        invalid = (
-            (result[f"{side}_high"] < result[[f"{side}_open", f"{side}_close", f"{side}_low"]].max(axis=1))
-            | (result[f"{side}_low"] > result[[f"{side}_open", f"{side}_close", f"{side}_high"]].min(axis=1))
+        invalid_prices = result[price_columns].isna().any().any() or (
+            (result[price_columns] <= 0).any().any()
         )
+        if invalid_prices:
+            raise MarketDataError(
+                f"{side} file contains missing, non-numeric, or non-positive prices."
+            )
+        high_columns = [f"{side}_open", f"{side}_close", f"{side}_low"]
+        low_columns = [f"{side}_open", f"{side}_close", f"{side}_high"]
+        invalid = (
+            result[f"{side}_high"] < result[high_columns].max(axis=1)
+        ) | (result[f"{side}_low"] > result[low_columns].min(axis=1))
         if invalid.any():
             raise MarketDataError(f"{side} OHLC invariant violated.")
         result = result.set_index("timestamp").sort_index()
