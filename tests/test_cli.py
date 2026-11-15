@@ -202,3 +202,9 @@ def test_fit_regimes_cli_fits_only_training_partition(tmp_path, monkeypatch):
 def test_train_stacked_cli_command_is_registered():
     command_names = {command.name for command in app.registered_commands}
     assert "train-stacked" in command_names
+
+
+
+def test_train_sequence_cli_command_is_registered():
+    command_names = {command.name for command in app.registered_commands}
+    assert "train-sequence" in command_names
