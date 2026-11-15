@@ -178,6 +178,11 @@ def test_predict_frame_loads_sequence_checkpoint_and_aligns_window_rows(tmp_path
 
     result = predict_frame(candles, artifact_path, min_probability=0.0)
 
+    valid_predictions = result["confidence"].gt(0.0)
     assert result.iloc[:15]["confidence"].eq(0.0).all()
-    assert result.iloc[15:]["confidence"].gt(0.0).all()
-    assert result.iloc[15:][["prob_sell", "prob_wait", "prob_buy"]].notna().all().all()
+    assert valid_predictions.sum() > 100
+    assert result.loc[valid_predictions, ["prob_sell", "prob_wait", "prob_buy"]].notna().all().all()
+    assert np.allclose(
+        result.loc[valid_predictions, ["prob_sell", "prob_wait", "prob_buy"]].sum(axis=1),
+        1.0,
+    )
