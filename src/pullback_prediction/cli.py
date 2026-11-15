@@ -21,6 +21,7 @@ from pullback_prediction.training.baseline import train_baseline_from_frame
 from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.inference import predict_frame
 from pullback_prediction.training.regime import RegimeDetector
+from pullback_prediction.training.stacking import train_stacked_from_frame
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
@@ -268,6 +269,35 @@ def train_baseline(
         barrier_atr_multiple=barrier_atr_multiple,
         max_iter=max_iter,
         timeframe=timeframe,
+    )
+    for key, value in result.items():
+        typer.echo(f"{key}={value}")
+
+
+@app.command("train-stacked")
+def train_stacked_command(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    output: Path = typer.Option(Path("artifacts/xauusd_stacked.joblib"), "--output"),
+    timeframe: str = typer.Option("M1", "--timeframe"),
+    horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
+    barrier_atr_multiple: float = typer.Option(
+        1.5, "--barrier-atr-multiple", min=0.01
+    ),
+    n_splits: int = typer.Option(5, "--n-splits", min=2),
+    gap_bars: int | None = typer.Option(None, "--gap-bars", min=0),
+    max_iter: int = typer.Option(200, "--max-iter", min=1),
+) -> None:
+    """Train an OOF stack, calibrate 2021–2022 and evaluate 2023."""
+    frame = pd.read_parquet(input)
+    result = train_stacked_from_frame(
+        frame,
+        str(output),
+        timeframe=timeframe,
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+        n_splits=n_splits,
+        gap_bars=gap_bars,
+        max_iter=max_iter,
     )
     for key, value in result.items():
         typer.echo(f"{key}={value}")
