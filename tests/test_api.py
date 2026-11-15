@@ -70,3 +70,46 @@ def test_api_predict_returns_buy_sell_wait_labels(monkeypatch, tmp_path):
     assert len(result) == 220
     assert result[-1].signal == "WAIT"
     assert result[-1].prob_wait == 0.5
+
+
+
+def test_api_predict_rejects_naive_timestamps(monkeypatch, tmp_path):
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request()
+    request.candles[0].timestamp = pd.Timestamp("2024-01-01").to_pydatetime()
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "timezone-aware" in error.value.detail
+
+
+def test_api_predict_rejects_crossed_bid_ask_quotes(monkeypatch, tmp_path):
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request()
+    request.candles[5].ask_close = 1999.0
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "ask" in error.value.detail.lower()
+
+
+def test_api_predict_rejects_invalid_ohlc_ranges(monkeypatch, tmp_path):
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request()
+    request.candles[5].bid_high = 1999.0
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "ohlc" in error.value.detail.lower()
