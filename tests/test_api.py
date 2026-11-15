@@ -121,7 +121,10 @@ def test_api_predict_rejects_ask_below_bid(monkeypatch, tmp_path):
     model.touch()
     monkeypatch.setattr(api, "MODEL_PATH", model)
     request = make_request()
-    request.candles[0].ask_open = 1999.0
+    request.candles[0].ask_open = 1999.2
+    request.candles[0].ask_high = 2000.2
+    request.candles[0].ask_low = 1998.2
+    request.candles[0].ask_close = 1999.7
 
     with pytest.raises(api.HTTPException) as error:
         api.predict(request)
