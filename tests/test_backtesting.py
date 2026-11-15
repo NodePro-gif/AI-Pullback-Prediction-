@@ -171,3 +171,14 @@ def test_backtester_rejects_non_finite_cost_parameters():
             pd.Series([1.0], index=frame.index),
             slippage_price=float("nan"),
         )
+
+
+def test_backtester_rejects_negative_spread_on_any_ohlc_field():
+    frame = _valid_single_candle().astype(float)
+    frame.loc[frame.index[0], "ask_low"] = 98.9
+    with pytest.raises(ValueError, match="Ask low"):
+        backtest_signals(
+            frame,
+            pd.Series([0], index=frame.index),
+            pd.Series([1.0], index=frame.index),
+        )
