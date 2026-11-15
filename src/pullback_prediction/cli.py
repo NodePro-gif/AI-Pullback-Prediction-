@@ -1,9 +1,9 @@
 """Command-line interface for data preparation, training, prediction, and evaluation."""
 
 import json
+from pathlib import Path
 
 import joblib
-from pathlib import Path
 
 import pandas as pd
 import typer
