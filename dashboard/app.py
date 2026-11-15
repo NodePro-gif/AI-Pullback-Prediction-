@@ -14,6 +14,7 @@ st.caption("Research-only. No broker connection or order execution.")
 model_path = st.text_input("Model artifact", "artifacts/xauusd_baseline.joblib")
 uploaded = st.file_uploader("Upload bid/ask candle Parquet", type=["parquet"])
 threshold = st.slider("Minimum calibrated confidence", 0.0, 1.0, 0.60, 0.01)
+timeframe = st.selectbox("Candle timeframe", ["M1", "M5"])
 
 if uploaded is not None:
     candles = pd.read_parquet(uploaded)
@@ -23,7 +24,12 @@ if uploaded is not None:
             st.error("Model artifact not found.")
         else:
             try:
-                predictions = predict_frame(candles, model_path, min_probability=threshold)
+                predictions = predict_frame(
+                    candles,
+                    model_path,
+                    min_probability=threshold,
+                    timeframe=timeframe,
+                )
                 if not predictions["probabilities_calibrated"].all():
                     st.warning(
                         "This artifact returns raw model scores, not calibrated probabilities."
