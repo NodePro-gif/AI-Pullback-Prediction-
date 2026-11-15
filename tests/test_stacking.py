@@ -67,8 +67,6 @@ def test_stacked_classifier_rejects_feature_schema_changes():
 def test_stacked_training_labels_each_period_without_crossing_boundaries(
     tmp_path, monkeypatch
 ):
-    import joblib
-
     from pullback_prediction.labels import barriers
     from pullback_prediction.training import calibration, stacking
     from pullback_prediction.data.splits import chronological_split
@@ -119,6 +117,8 @@ def test_stacked_training_labels_each_period_without_crossing_boundaries(
         lambda probabilities, calibrators: probabilities,
     )
 
+    saved = {}
+    monkeypatch.setattr("joblib.dump", lambda artifact, path: saved.update(artifact=artifact))
     output = tmp_path / "stacked.joblib"
     result = stacking.train_stacked_from_frame(
         candles,
@@ -137,6 +137,6 @@ def test_stacked_training_labels_each_period_without_crossing_boundaries(
             partitions["validation"].index >= pd.Timestamp("2023-01-01", tz="UTC")
         ].index,
     ]
-    artifact = joblib.load(output)
+    artifact = saved["artifact"]
     assert artifact["final_test_period"].startswith("2024-01-01")
     assert result["evaluation_rows"] == len(evaluation_index)
