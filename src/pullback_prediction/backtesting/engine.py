@@ -28,7 +28,7 @@ def _summary(trades: pd.DataFrame) -> dict[str, Any]:
     losses = float(-pnl[pnl < 0].sum())
     equity = pnl.cumsum()
     drawdown = equity - equity.cummax()
-    profit_factor = gains / losses if losses > 0 else (float("inf") if gains else 0.0)
+    profit_factor = gains / losses if losses > 0 else None
     return {
         "total_trades": int(len(trades)),
         "win_rate": float((pnl > 0).mean()),
