@@ -167,20 +167,29 @@ def train_stacked_from_frame(
 
     development = pd.concat([training, validation])
     features = build_features(development)
-    labels = make_barrier_labels(
-        development,
-        features["atr_14"],
+    train_x = features.loc[training.index]
+    train_y = make_barrier_labels(
+        training,
+        train_x["atr_14"],
         horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple,
     )
-    train_x = features.loc[training.index]
-    train_y = labels.loc[training.index]
     train_valid = train_x.notna().all(axis=1) & train_y.notna()
     calibration_x = features.loc[calibration.index]
-    calibration_y = labels.loc[calibration.index]
+    calibration_y = make_barrier_labels(
+        calibration,
+        calibration_x["atr_14"],
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+    )
     calibration_valid = calibration_x.notna().all(axis=1) & calibration_y.notna()
     evaluation_x = features.loc[evaluation.index]
-    evaluation_y = labels.loc[evaluation.index]
+    evaluation_y = make_barrier_labels(
+        evaluation,
+        evaluation_x["atr_14"],
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+    )
     evaluation_valid = evaluation_x.notna().all(axis=1) & evaluation_y.notna()
     train_x, train_y = train_x.loc[train_valid], train_y.loc[train_valid].astype(int)
     calibration_x = calibration_x.loc[calibration_valid]
