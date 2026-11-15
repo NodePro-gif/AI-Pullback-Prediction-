@@ -4,9 +4,9 @@ import pytest
 from pullback_prediction.backtesting.engine import backtest_signals
 
 
-def candles(rows):
+def candles(rows, columns):
     index = pd.date_range("2024-01-01", periods=len(rows), freq="min", tz="UTC")
-    return pd.DataFrame(rows, index=index)
+    return pd.DataFrame(rows, index=index, columns=columns)
 
 
 def test_long_trade_enters_next_open_and_accounts_for_spread_slippage_and_commission():
