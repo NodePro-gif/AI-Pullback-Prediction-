@@ -77,10 +77,15 @@ def train_sequence_from_frame(
     early_stop_cutoff = pd.Timestamp("2022-01-01", tz="UTC")
     evaluation_cutoff = pd.Timestamp("2023-01-01", tz="UTC")
     early_stopping = validation.loc[validation.index < early_stop_cutoff]
-    calibration = validation.loc[(validation.index >= early_stop_cutoff) & (validation.index < evaluation_cutoff)]
+    calibration = validation.loc[
+        (validation.index >= early_stop_cutoff)
+        & (validation.index < evaluation_cutoff)
+    ]
     evaluation = validation.loc[validation.index >= evaluation_cutoff]
     if training.empty or early_stopping.empty or calibration.empty or evaluation.empty:
-        raise ValueError("2015–2020 train, 2021 early stopping, 2022 calibration and 2023 evaluation are required.")
+        raise ValueError(
+            "2015–2020 train, 2021 early stopping, 2022 calibration and 2023 evaluation are required."
+        )
 
     # Only development candles are passed to feature engineering. 2024+ is never read.
     development = pd.concat([training, validation])
