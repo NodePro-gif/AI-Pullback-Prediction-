@@ -5,7 +5,7 @@ from __future__ import annotations
 import os
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
 import pandas as pd
@@ -38,6 +38,7 @@ class Candle(BaseModel):
 
 
 class PredictionRequest(BaseModel):
+    timeframe: Literal["M1", "M5"] = "M1"
     candles: list[Candle] = Field(min_length=220, max_length=5000)
 
 
@@ -78,6 +79,15 @@ def predict(request: PredictionRequest) -> list[Prediction]:
     if not frame.index.is_monotonic_increasing:
         raise HTTPException(status_code=422, detail="Candle timestamps must be chronological.")
     frame.index = frame.index.tz_convert("UTC")
+    expected_interval = pd.Timedelta(
+        60 if request.timeframe == "M1" else 300, unit="s"
+    )
+    median_interval = frame.index.to_series().diff().dropna().median()
+    if median_interval != expected_interval:
+        raise HTTPException(
+            status_code=422,
+            detail=f"Candle spacing does not match declared {request.timeframe} timeframe.",
+        )
     price_columns = [column for column in frame if column != "volume"]
     if not np.isfinite(frame[price_columns].to_numpy(dtype=float)).all():
         raise HTTPException(status_code=422, detail="Candle prices must be finite.")
@@ -93,7 +103,12 @@ def predict(request: PredictionRequest) -> list[Prediction]:
         if (frame[f"ask_{field}"] < frame[f"bid_{field}"]).any():
             raise HTTPException(status_code=422, detail="Ask prices cannot be below bid prices.")
     try:
-        result = predict_frame(frame, MODEL_PATH, min_probability=MIN_PROBABILITY)
+        result = predict_frame(
+            frame,
+            MODEL_PATH,
+            min_probability=MIN_PROBABILITY,
+            timeframe=request.timeframe,
+        )
     except (ValueError, KeyError, TypeError) as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
