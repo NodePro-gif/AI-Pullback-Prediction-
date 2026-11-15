@@ -38,3 +38,19 @@ def test_sequence_windows_reject_misaligned_indexes():
     labels = pd.Series(np.ones(8), index=index[::-1])
     with pytest.raises(ValueError, match="identical indexes"):
         make_sequence_windows(features, labels)
+
+def test_sequence_model_architectures_forward_pass_when_torch_is_available():
+    torch = pytest.importorskip("torch")
+    from pullback_prediction.training.sequence import build_sequence_model
+
+    values = torch.randn(4, 16, 6)
+    for architecture in ("lstm", "transformer"):
+        model = build_sequence_model(
+            architecture,
+            n_features=6,
+            n_classes=3,
+            hidden_dim=16,
+            num_layers=1,
+            max_sequence_length=16,
+        )
+        assert model(values).shape == (4, 3)
