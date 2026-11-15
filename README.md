@@ -55,7 +55,13 @@ Validate a downloaded Dukascopy CSV:
 pullback-predict validate-data --input data/raw/XAUUSD_M1.csv --timeframe M1
 ```
 
-Create chronological partitions:
+Combine the two validated exports into a processed Parquet file:
+
+```bash
+pullback-predict prepare-data --bid-input data/raw/xauusd-m1-bid-2015-01-01-2021-01-01.csv --ask-input data/raw/xauusd-m1-ask-2015-01-01-2021-01-01.csv --timeframe M1 --output data/processed/XAUUSD_M1.parquet
+```
+
+The command refuses to overwrite an existing processed file. Create chronological partitions:
 
 ```bash
 pullback-predict split-data --input data/processed/XAUUSD_M1.parquet --output-dir data/splits
