@@ -82,7 +82,7 @@ def _predict_sequence_artifact(
     predicted = classes[best]
     confidence = probabilities.max(axis=1)
     positions = candles.index.get_indexer(windows.timestamps)
-    result.iloc[positions, result.columns.get_loc("predicted_class")] = predicted
+    result.iloc[positions, result.columns.get_loc("predicted_class")] = predicted.astype("int8")
     result.iloc[positions, result.columns.get_loc("confidence")] = confidence
     result.iloc[positions, result.columns.get_loc("signal")] = np.where(
         (confidence >= min_probability) & (predicted != 0), predicted, 0
