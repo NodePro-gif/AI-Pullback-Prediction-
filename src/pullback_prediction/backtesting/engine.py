@@ -69,10 +69,41 @@ def backtest_signals(
         raise ValueError("Candles, signals, and ATR must have the same index.")
     if not isinstance(candles.index, pd.DatetimeIndex):
         raise TypeError("Candles must use a DatetimeIndex.")
+    if candles.index.tz is None:
+        raise ValueError("Candle timestamps must be timezone-aware.")
     if not candles.index.is_monotonic_increasing or candles.index.has_duplicates:
         raise ValueError("Candle timestamps must be unique and sorted ascending.")
     if not signals.isin([-1, 0, 1]).all():
         raise ValueError("Signals must contain only -1, 0, or 1.")
+
+    prices = candles[list(_REQUIRED)].to_numpy(dtype=float)
+    if not np.isfinite(prices).all() or (prices <= 0).any():
+        raise ValueError("Bid/ask OHLC prices must be finite and positive.")
+    for side in ("bid", "ask"):
+        side_frame = candles[
+            [f"{side}_{field}" for field in ("open", "high", "low", "close")]
+        ]
+        expected_high = side_frame[["open", "close", "low"]].max(axis=1)
+        expected_low = side_frame[["open", "close", "high"]].min(axis=1)
+        if (
+            (side_frame["high"] < expected_high).any()
+            or (side_frame["low"] > expected_low).any()
+        ):
+            raise ValueError(f"Invalid {side} OHLC candle.")
+    if (candles["ask_close"] < candles["bid_close"]).any():
+        raise ValueError("Ask close cannot be below bid close.")
+
+    parameters = np.asarray(
+        [
+            stop_atr_multiple,
+            take_profit_atr_multiple,
+            slippage_price,
+            commission_price_units,
+        ],
+        dtype=float,
+    )
+    if not np.isfinite(parameters).all():
+        raise ValueError("Backtest cost and risk parameters must be finite.")
     if stop_atr_multiple <= 0 or take_profit_atr_multiple <= 0:
         raise ValueError("Stop and take-profit ATR multiples must be positive.")
     if max_holding_bars < 1:
