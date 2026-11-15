@@ -65,7 +65,7 @@ def health() -> dict[str, Any]:
 def predict(request: PredictionRequest) -> list[Prediction]:
     if not MODEL_PATH.is_file():
         raise HTTPException(status_code=503, detail="Model artifact is not configured.")
-    frame = pd.DataFrame([item.dict() for item in request.candles])
+    payload = [\n        item.model_dump() if hasattr(item, "model_dump") else item.dict()\n        for item in request.candles\n    ]\n    frame = pd.DataFrame(payload)
     frame = frame.set_index("timestamp")
     if not isinstance(frame.index, pd.DatetimeIndex) or frame.index.tz is None:
         raise HTTPException(status_code=422, detail="Timestamps must include a timezone.")
