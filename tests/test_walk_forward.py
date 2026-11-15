@@ -26,7 +26,7 @@ def test_walk_forward_uses_chronological_expanding_folds_and_gap():
     assert len(folds) == 4
     assert result["summary"]["folds"] == 4
     assert result["summary"]["test_rows"] == sum(f["test_rows"] for f in folds)
-    for previous, current in zip(folds, folds[1:]):
+    for previous, current in zip(folds, folds[1:], strict=False):
         assert previous["test_end"] < current["test_start"]
         assert previous["train_rows"] < current["train_rows"]
     assert all(0.0 <= fold["accuracy"] <= 1.0 for fold in folds)
