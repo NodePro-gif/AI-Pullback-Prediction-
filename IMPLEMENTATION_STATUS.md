@@ -1,20 +1,23 @@
 # Implementation status
 
-Statuses: **verified** means the stated check was run and passed; **implemented, unverified** means code was written but has not been executed in a matching environment; **pending** means not implemented.
+Statuses: **implemented, unverified** means code is in the repository but has not yet been executed in CI; **verified** requires a passing recorded check; **pending** means not implemented.
 
 | Component | Status | Evidence / next check |
 |---|---|---|
-| Repository and project contract | implemented, unverified | Review README and constraints |
-| Python package and CLI | pending | Install package; run CLI help |
-| Dukascopy bid/ask CSV loader | pending | Unit tests with valid and malformed fixtures |
-| Chronological data partitions | pending | Assert date boundaries and no overlap |
-| Causal feature engineering | pending | Unit tests plus future-perturbation leakage test |
-| Pullback event labels | pending | Boundary and future-window tests |
+| Repository and project contract | implemented, unverified | README and hard constraints committed |
+| Python package metadata and dependencies | implemented, unverified | CI install on Python 3.11 and 3.12 |
+| CLI for data validation and splitting | implemented, unverified | CI import; CLI smoke test still required |
+| Dukascopy bid/ask CSV loader | implemented, unverified | Unit tests in tests/test_loader.py |
+| Fixed chronological partitions | implemented, unverified | Boundary tests in tests/test_splits.py |
+| Causal technical/microstructure features | implemented, unverified | Tests include future-perturbation leakage check |
+| ATR first-touch barrier labels | implemented, unverified | First-touch, ambiguous-bar and censoring tests |
+| Automated CI | implemented, unverified | GitHub Actions run must be inspected |
+| Paired Dukascopy bid/ask file ingestion | pending | Needed if provider exports bid and ask as separate files |
 | XGBoost baseline | pending | Train on train partition; evaluate on validation |
-| LSTM and Transformer | pending | Shape, masking, and reproducibility tests |
+| LSTM and Transformer | pending | Shape, masking, reproducibility tests |
 | Regime detector and meta-learner | pending | Walk-forward calibration tests |
 | Probability calibration and WAIT policy | pending | Reliability and abstention tests |
-| Cost-aware backtester | pending | Hand-calculated trade fixtures |
+| Cost-aware backtester | pending | Hand-calculated bid/ask trade fixtures |
 | FastAPI service | pending | API contract tests |
 | Streamlit dashboard | pending | Launch and smoke test |
 | Docker/VPS deployment | pending | Container build and health check |
