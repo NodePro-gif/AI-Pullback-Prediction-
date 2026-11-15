@@ -157,6 +157,7 @@ def backtest_signals(
                     exit_price = target_price + slippage_price
                     exit_reason = "take_profit"
             if np.isfinite(exit_price):
+                exit_i = bar_i
                 break
 
         if not np.isfinite(exit_price):
