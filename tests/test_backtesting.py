@@ -43,6 +43,7 @@ def test_long_trade_enters_next_open_and_accounts_for_spread_slippage_and_commis
     assert trade["exit_price"] == pytest.approx(103.0)
     assert trade["exit_reason"] == "take_profit"
     assert trade["net_pnl"] == pytest.approx(1.7)
+    assert result["summary"]["profit_factor"] is None
 
 
 def test_same_bar_stop_and_target_uses_conservative_stop_fill():
@@ -68,6 +69,7 @@ def test_same_bar_stop_and_target_uses_conservative_stop_fill():
     trade = result["trades"].iloc[0]
     assert trade["exit_reason"] == "stop_loss"
     assert trade["net_pnl"] == pytest.approx(-1.0)
+    assert result["summary"]["max_drawdown"] == pytest.approx(-1.0)
 
 
 def test_backtester_rejects_misaligned_inputs():
