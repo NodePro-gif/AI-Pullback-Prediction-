@@ -113,3 +113,32 @@ def test_api_predict_rejects_invalid_ohlc_ranges(monkeypatch, tmp_path):
 
     assert error.value.status_code == 422
     assert "ohlc" in error.value.detail.lower()
+
+def test_api_predict_rejects_ask_below_bid(monkeypatch, tmp_path):
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request()
+    request.candles[0].ask_open = 1999.0
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "Ask prices" in error.value.detail
+
+
+def test_api_predict_rejects_timezone_naive_timestamp(monkeypatch, tmp_path):
+    from datetime import datetime
+
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request()
+    request.candles[0].timestamp = datetime(2024, 1, 1)
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "timezone" in error.value.detail
