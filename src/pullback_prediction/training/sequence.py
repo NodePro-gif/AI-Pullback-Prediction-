@@ -72,7 +72,9 @@ def build_sequence_model(
         import torch
         from torch import nn
     except ImportError as exc:
-        raise ImportError("Install the optional ML dependencies: pip install -e '.[deep-learning]'") from exc
+        raise ImportError(
+            "Install optional PyTorch dependencies: pip install -e '.[deep-learning]'"
+        ) from exc
 
     if architecture not in {"lstm", "transformer"}:
         raise ValueError("architecture must be 'lstm' or 'transformer'.")
@@ -145,7 +147,9 @@ def train_sequence_model(
         from torch import nn
         from torch.utils.data import DataLoader, TensorDataset
     except ImportError as exc:
-        raise ImportError("Install the optional ML dependencies: pip install -e '.[deep-learning]'") from exc
+        raise ImportError(
+            "Install optional PyTorch dependencies: pip install -e '.[deep-learning]'"
+        ) from exc
 
     if train_x.ndim != 3 or validation_x.ndim != 3:
         raise ValueError("Sequence features must have shape [rows, steps, features].")
