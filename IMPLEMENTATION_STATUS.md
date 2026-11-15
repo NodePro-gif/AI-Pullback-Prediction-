@@ -7,7 +7,7 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | Repository contract and chronological data policy | verified | README and fixed date boundaries committed |
 | Dukascopy bid/ask loader and downloader | implemented, unverified at scale | CSV, timestamp, alignment, retry/cache tests pass; full historical download pending |
 | Parquet preparation and chronological splitting | verified | CLI conversion and boundary tests pass |
-| Causal technical features and ATR first-touch labels | verified | Future-perturbation, first-touch, ambiguous-bar and censoring tests |
+| Causal technical features and ATR first-touch labels | verified | Future-perturbation, first-touch, ambiguous-bar and censoring tests; EMA trend strength, ATR/volatility ratios, spread context and cyclical UTC session features |
 | HistGradientBoosting baseline | verified in unit tests | Full 2015–2020 market-data fit pending |
 | Isotonic calibration and inference abstention | verified in unit tests | Calibration on 2021–2022; holdout evaluation on 2023 |
 | Expanding-window walk-forward | verified in unit tests | Candle gap enforced before invalid-row filtering; final-test partition excluded |
