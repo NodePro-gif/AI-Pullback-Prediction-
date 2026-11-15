@@ -52,20 +52,32 @@ def benchmark_tabular_models(
         except ImportError as exc:
             xgb_import_error = str(exc)
         else:
-            model_factories["xgboost"] = lambda class_count: XGBClassifier(
-                n_estimators=xgb_estimators,
-                max_depth=6,
-                learning_rate=0.05,
-                subsample=0.85,
-                colsample_bytree=0.85,
-                reg_lambda=2.0,
-                objective="binary:logistic" if class_count == 2 else "multi:softprob",
-                num_class=class_count if class_count > 2 else None,
-                eval_metric="logloss" if class_count == 2 else "mlogloss",
-                tree_method="hist",
-                n_jobs=-1,
-                random_state=42,
-            )
+            def make_xgboost(class_count: int) -> Any:
+                parameters: dict[str, Any] = {
+                    "n_estimators": xgb_estimators,
+                    "max_depth": 6,
+                    "learning_rate": 0.05,
+                    "subsample": 0.85,
+                    "colsample_bytree": 0.85,
+                    "reg_lambda": 2.0,
+                    "tree_method": "hist",
+                    "n_jobs": -1,
+                    "random_state": 42,
+                }
+                if class_count == 2:
+                    parameters.update(
+                        objective="binary:logistic",
+                        eval_metric="logloss",
+                    )
+                else:
+                    parameters.update(
+                        objective="multi:softprob",
+                        num_class=class_count,
+                        eval_metric="mlogloss",
+                    )
+                return XGBClassifier(**parameters)
+
+            model_factories["xgboost"] = make_xgboost
 
     results: dict[str, list[dict[str, Any]]] = {
         name: [] for name in model_factories
@@ -88,7 +100,7 @@ def benchmark_tabular_models(
         mapped_test = test_y.map(class_map)
 
         for name, factory in model_factories.items():
-            model = factory()
+            model = factory(len(classes)) if name == "xgboost" else factory()
             if name == "xgboost":
                 model.fit(train_x, mapped_train)
                 predicted_indices = model.predict(test_x).astype(int)
