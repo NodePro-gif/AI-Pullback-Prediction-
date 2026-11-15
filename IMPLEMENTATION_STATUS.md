@@ -1,22 +1,22 @@
 # Implementation status
 
-Statuses: **implemented, unverified** means code is in the repository but has not yet been executed in CI; **verified** requires a passing recorded check; **pending** means not implemented.
+Statuses: **verified** means passing recorded checks; **implemented, unverified** means code exists but runtime or data-scale behavior has not yet been validated; **pending** means not implemented.
 
 | Component | Status | Evidence / next check |
 |---|---|---|
-| Repository and project contract | implemented, unverified | README and hard constraints committed |
-| Python package metadata and dependencies | implemented, unverified | CI install on Python 3.11 and 3.12 |
-| CLI for data validation and splitting | implemented, unverified | CI import; CLI smoke test still required |
-| Dukascopy bid/ask CSV loader | implemented, unverified | Unit tests in tests/test_loader.py |
-| Fixed chronological partitions | implemented, unverified | Boundary tests in tests/test_splits.py |
-| Causal technical/microstructure features | implemented, unverified | Tests include future-perturbation leakage check |
-| ATR first-touch barrier labels | implemented, unverified | First-touch, ambiguous-bar and censoring tests |
-| Automated CI | implemented, unverified | GitHub Actions run must be inspected |
-| Paired Dukascopy bid/ask file ingestion | pending | Needed if provider exports bid and ask as separate files |
-| XGBoost baseline | pending | Train on train partition; evaluate on validation |
-| LSTM and Transformer | pending | Shape, masking, reproducibility tests |
+| Repository and project contract | verified | README and hard constraints committed |
+| Python package metadata and dependencies | implemented, unverified | CI dependency installation |
+| CLI for validation, splitting, and baseline training | implemented, unverified | CI plus CLI smoke test |
+| Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI |
+| Separate Dukascopy bid/ask file ingestion | verified | Paired-file alignment tests pass in CI |
+| Fixed chronological partitions | verified | Boundary tests pass in CI |
+| Causal technical/microstructure features | verified | Future-perturbation leakage test passes in CI |
+| ATR first-touch barrier labels | verified | First-touch, ambiguous-bar and censoring tests pass in CI |
+| HistGradientBoosting baseline | implemented, unverified | Train-only fitting and validation metrics; CI pending |
+| XGBoost baseline | pending | Later model comparison candidate |
+| LSTM and Transformer | pending | Sequence windows, masks, reproducibility and walk-forward checks |
 | Regime detector and meta-learner | pending | Walk-forward calibration tests |
-| Probability calibration and WAIT policy | pending | Reliability and abstention tests |
+| Probability calibration and WAIT policy | pending | Reliability, expected-value and abstention tests |
 | Cost-aware backtester | pending | Hand-calculated bid/ask trade fixtures |
 | FastAPI service | pending | API contract tests |
 | Streamlit dashboard | pending | Launch and smoke test |
@@ -27,8 +27,8 @@ Statuses: **implemented, unverified** means code is in the repository but has no
 - Instrument: XAUUSD.
 - Timeframes: M1 and M5.
 - Canonical data: Dukascopy bid and ask.
-- Training: 2015–2020.
-- Validation: 2021–2023.
-- Final test: 2024 onward; do not use for tuning.
+- Training: 2015–2020 only.
+- Validation: 2021–2023 only.
+- Final test: 2024 onward; excluded from training and model selection.
 - Outputs: BUY / SELL / WAIT.
 - No broker order execution; live trading remains disabled.
