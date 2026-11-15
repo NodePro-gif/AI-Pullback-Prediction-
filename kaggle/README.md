@@ -1,15 +1,13 @@
-# Kaggle GPU workflow
+# Kaggle GPU workflow (automatic data download)
 
-1. Open `kaggle/AI_Pullback_Prediction_Kaggle.ipynb` from this repository in Kaggle (or upload the notebook).
-2. In Notebook **Settings → Accelerator**, select **GPU**.
-3. Use **Add Input** to attach a prepared XAUUSD Parquet dataset created by this project's `prepare-data` command. The Parquet must contain bid/ask OHLC columns and a UTC DatetimeIndex.
-4. Run all cells. If more than one Parquet is attached, set `DATA_PATH` explicitly in the configuration cell.
-5. Results are written to `/kaggle/working/artifacts/`: model metadata `.joblib`, weights `.pt`, and metrics `.metrics.json`.
+1. Open `kaggle/AI_Pullback_Prediction_Kaggle.ipynb` in Kaggle.
+2. In Notebook **Settings → Accelerator**, select **GPU** and turn **Internet** on.
+3. Run all cells. The notebook clones this repository, installs PyTorch, installs Node.js/npm if needed, downloads XAUUSD bid and ask candles directly from Dukascopy, validates and combines them into Parquet, then trains the selected LSTM/Transformer model.
+4. Default download: 2015-01-01 through 2024-01-01 (exclusive). This provides 2015–2020 training, 2021 early stopping, 2022 calibration and 2023 evaluation. It deliberately does not download/use 2024+.
+5. Outputs are written to `/kaggle/working/artifacts/`: `.joblib` metadata, `.pt` weights and `.metrics.json`.
 
-The notebook clones this repository and installs its `deep-learning` extra. Kaggle Internet must be enabled for cloning and package installation. GPU mode is required by the notebook and CUDA availability is checked before training.
+Set `TIMEFRAME` to `M5` for a separate M5 run. Kaggle Internet is required for GitHub, npm and Dukascopy access. Historical M1 downloads are large and may exceed a single Kaggle session's time or disk limits; the downloader uses retry/cache, but Kaggle's ephemeral working storage is not permanent. Downloaded files can be saved as a Kaggle Dataset between sessions if needed.
 
-Default settings are conservative for common Kaggle GPUs (batch size 256, sequence length 128). If CUDA runs out of memory, reduce batch size (128, 64, 32). If memory allows, benchmark larger batches rather than assuming the largest batch is fastest.
+Batch size defaults to 256. If CUDA runs out of memory, reduce it to 128, 64 or 32. Benchmark throughput rather than assuming the largest batch is fastest.
 
-The sequence pipeline uses 2015–2020 for training, 2021 for early stopping, 2022 for calibration, and 2023 for evaluation. It does not access 2024+ final-test rows. M1 and M5 require separate datasets and separate model artifacts.
-
-This notebook does not download market data automatically. Attach a prepared dataset as a Kaggle Dataset first; raw bid/ask CSV exports should be validated and combined with `prepare-data` before training.
+No manual dataset upload is required. The notebook fetches market data itself. Training and evaluation metrics are research measurements, not a guarantee of profitability.
