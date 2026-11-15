@@ -52,15 +52,16 @@ def benchmark_tabular_models(
         except ImportError as exc:
             xgb_import_error = str(exc)
         else:
-            model_factories["xgboost"] = lambda: XGBClassifier(
+            model_factories["xgboost"] = lambda class_count: XGBClassifier(
                 n_estimators=xgb_estimators,
                 max_depth=6,
                 learning_rate=0.05,
                 subsample=0.85,
                 colsample_bytree=0.85,
                 reg_lambda=2.0,
-                objective="multi:softprob",
-                eval_metric="mlogloss",
+                objective="binary:logistic" if class_count == 2 else "multi:softprob",
+                num_class=class_count if class_count > 2 else None,
+                eval_metric="logloss" if class_count == 2 else "mlogloss",
                 tree_method="hist",
                 n_jobs=-1,
                 random_state=42,
