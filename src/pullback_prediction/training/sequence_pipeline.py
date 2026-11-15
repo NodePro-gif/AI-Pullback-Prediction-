@@ -74,16 +74,19 @@ def train_sequence_from_frame(
     partitions = chronological_split(candles)
     training = partitions["train"]
     validation = partitions["validation"]
-    cutoff = pd.Timestamp("2023-01-01", tz="UTC")
-    calibration = validation.loc[validation.index < cutoff]
-    evaluation = validation.loc[validation.index >= cutoff]
-    if training.empty or calibration.empty or evaluation.empty:
-        raise ValueError("2015–2020 train, 2021–2022 calibration and 2023 evaluation are required.")
+    early_stop_cutoff = pd.Timestamp("2022-01-01", tz="UTC")
+    evaluation_cutoff = pd.Timestamp("2023-01-01", tz="UTC")
+    early_stopping = validation.loc[validation.index < early_stop_cutoff]
+    calibration = validation.loc[(validation.index >= early_stop_cutoff) & (validation.index < evaluation_cutoff)]
+    evaluation = validation.loc[validation.index >= evaluation_cutoff]
+    if training.empty or early_stopping.empty or calibration.empty or evaluation.empty:
+        raise ValueError("2015–2020 train, 2021 early stopping, 2022 calibration and 2023 evaluation are required.")
 
     # Only development candles are passed to feature engineering. 2024+ is never read.
     development = pd.concat([training, validation])
     all_features = build_features(development)
     train_features = all_features.loc[training.index]
+    early_stopping_features = all_features.loc[early_stopping.index]
     calibration_features = all_features.loc[calibration.index]
     evaluation_features = all_features.loc[evaluation.index]
 
@@ -108,6 +111,10 @@ def train_sequence_from_frame(
         training, transform(train_features), horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple, sequence_length=sequence_length,
     )
+    early_stopping_x, early_stopping_y = _partition_sequences(
+        early_stopping, transform(early_stopping_features), horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple, sequence_length=sequence_length,
+    )
     calibration_x, calibration_y = _partition_sequences(
         calibration, transform(calibration_features), horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple, sequence_length=sequence_length,
@@ -116,11 +123,13 @@ def train_sequence_from_frame(
         evaluation, transform(evaluation_features), horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple, sequence_length=sequence_length,
     )
-    if not len(calibration_y) or not len(evaluation_y):
-        raise ValueError("Calibration and evaluation need usable sequence windows.")
+    if not len(early_stopping_y) or not len(calibration_y) or not len(evaluation_y):
+        raise ValueError("Early stopping, calibration and evaluation need usable sequence windows.")
     classes = np.sort(np.unique(train_y))
     if len(classes) < 2:
         raise ValueError("Training sequence labels must contain at least two classes.")
+    if not set(np.unique(early_stopping_y)).issubset(set(classes.tolist())):
+        raise ValueError("Early-stopping labels contain a class absent from training.")
     if not set(np.unique(calibration_y)).issubset(set(classes.tolist())):
         raise ValueError("Calibration contains a class absent from training.")
     if not set(np.unique(evaluation_y)).issubset(set(classes.tolist())):
@@ -137,7 +146,7 @@ def train_sequence_from_frame(
     }
     model = build_sequence_model(**model_config)
     trained = train_sequence_model(
-        model, train_x, train_y, calibration_x, calibration_y,
+        model, train_x, train_y, early_stopping_x, early_stopping_y,
         epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
         patience=patience, device=device, mixed_precision=mixed_precision,
         num_workers=num_workers,
@@ -162,6 +171,7 @@ def train_sequence_from_frame(
     one_hot = np.column_stack([evaluation_y == value for value in classes]).astype(float)
     metrics = {
         "train_windows": int(len(train_y)),
+        "early_stopping_windows": int(len(early_stopping_y)),
         "calibration_windows": int(len(calibration_y)),
         "evaluation_windows": int(len(evaluation_y)),
         "accuracy": float(accuracy_score(evaluation_y, predictions)),
@@ -197,7 +207,8 @@ def train_sequence_from_frame(
             "calibration_classes": [int(value) for value in classes],
             "sequence_length": sequence_length,
             "training_period": "2015-01-01 through 2020-12-31",
-            "calibration_period": "2021-01-01 through 2022-12-31",
+            "early_stopping_period": "2021-01-01 through 2021-12-31",
+            "calibration_period": "2022-01-01 through 2022-12-31",
             "evaluation_period": "2023-01-01 through 2023-12-31",
             "final_test_period": "2024-01-01 onward; not accessed",
             "metrics": metrics,
