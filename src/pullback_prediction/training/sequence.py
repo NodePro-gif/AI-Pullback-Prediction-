@@ -173,6 +173,8 @@ def train_sequence_model(
 
     unique, counts = np.unique(train_y.astype(int), return_counts=True)
     class_map = {int(value): index for index, value in enumerate(unique)}
+    if getattr(getattr(model, "head", None), "out_features", len(unique)) != len(unique):
+        raise ValueError("Model output classes must match the training label classes.")
     if not set(np.unique(validation_y.astype(int))).issubset(class_map):
         raise ValueError("Validation labels contain a class absent from training.")
     mapped_train = np.asarray([class_map[int(value)] for value in train_y], dtype=np.int64)
