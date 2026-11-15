@@ -117,3 +117,57 @@ def test_short_trade_enters_bid_and_exits_ask_with_adverse_slippage():
     assert trade["exit_price"] == pytest.approx(98.8)
     assert trade["exit_reason"] == "take_profit"
     assert trade["net_pnl"] == pytest.approx(1.9)
+
+
+def _valid_single_candle():
+    return candles(
+        [[100, 101, 99, 100, 100.2, 101.2, 99.2, 100.2]],
+        columns=[
+            "bid_open", "bid_high", "bid_low", "bid_close",
+            "ask_open", "ask_high", "ask_low", "ask_close",
+        ],
+    )
+
+
+def test_backtester_rejects_timezone_naive_timestamps():
+    frame = _valid_single_candle()
+    frame.index = frame.index.tz_localize(None)
+    with pytest.raises(ValueError, match="timezone-aware"):
+        backtest_signals(
+            frame,
+            pd.Series([0], index=frame.index),
+            pd.Series([1.0], index=frame.index),
+        )
+
+
+def test_backtester_rejects_invalid_ohlc_range():
+    frame = _valid_single_candle()
+    frame.loc[frame.index[0], "bid_high"] = 99.5
+    with pytest.raises(ValueError, match="Invalid bid OHLC"):
+        backtest_signals(
+            frame,
+            pd.Series([0], index=frame.index),
+            pd.Series([1.0], index=frame.index),
+        )
+
+
+def test_backtester_rejects_ask_close_below_bid_close():
+    frame = _valid_single_candle()
+    frame.loc[frame.index[0], "ask_close"] = 99.9
+    with pytest.raises(ValueError, match="Ask close"):
+        backtest_signals(
+            frame,
+            pd.Series([0], index=frame.index),
+            pd.Series([1.0], index=frame.index),
+        )
+
+
+def test_backtester_rejects_non_finite_cost_parameters():
+    frame = _valid_single_candle()
+    with pytest.raises(ValueError, match="finite"):
+        backtest_signals(
+            frame,
+            pd.Series([0], index=frame.index),
+            pd.Series([1.0], index=frame.index),
+            slippage_price=float("nan"),
+        )
