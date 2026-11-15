@@ -18,6 +18,7 @@ def predict_frame(
     artifact_path: str | Path,
     *,
     min_probability: float = 0.60,
+    timeframe: str | None = None,
 ) -> pd.DataFrame:
     """Return calibrated class scores and BUY/SELL/WAIT signals for each candle.
 
@@ -31,6 +32,14 @@ def predict_frame(
     artifact: dict[str, Any] = joblib.load(artifact_path)
     model = artifact.get("model")
     feature_columns = artifact.get("feature_columns")
+    artifact_timeframe = artifact.get("timeframe")
+    if timeframe is not None:
+        if timeframe not in {"M1", "M5"}:
+            raise ValueError("timeframe must be M1 or M5.")
+        if artifact_timeframe != timeframe:
+            raise ValueError(
+                "Requested timeframe does not match model artifact; retrain or select the matching model."
+            )
     if model is None or not feature_columns:
         raise ValueError("Model artifact must contain model and feature_columns.")
 
