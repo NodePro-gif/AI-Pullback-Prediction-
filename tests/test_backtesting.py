@@ -141,7 +141,7 @@ def test_backtester_rejects_timezone_naive_timestamps():
 
 
 def test_backtester_rejects_invalid_ohlc_range():
-    frame = _valid_single_candle()
+    frame = _valid_single_candle().astype(float)
     frame.loc[frame.index[0], "bid_high"] = 99.5
     with pytest.raises(ValueError, match="Invalid bid OHLC"):
         backtest_signals(
