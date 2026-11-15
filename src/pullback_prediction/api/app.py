@@ -26,15 +26,15 @@ app = FastAPI(
 
 class Candle(BaseModel):
     timestamp: datetime
-    bid_open: float
-    bid_high: float
-    bid_low: float
-    bid_close: float
-    ask_open: float
-    ask_high: float
-    ask_low: float
-    ask_close: float
-    volume: float | None = None
+    bid_open: float = Field(gt=0, allow_inf_nan=False)
+    bid_high: float = Field(gt=0, allow_inf_nan=False)
+    bid_low: float = Field(gt=0, allow_inf_nan=False)
+    bid_close: float = Field(gt=0, allow_inf_nan=False)
+    ask_open: float = Field(gt=0, allow_inf_nan=False)
+    ask_high: float = Field(gt=0, allow_inf_nan=False)
+    ask_low: float = Field(gt=0, allow_inf_nan=False)
+    ask_close: float = Field(gt=0, allow_inf_nan=False)
+    volume: float | None = Field(default=None, ge=0, allow_inf_nan=False)
 
 
 class PredictionRequest(BaseModel):
