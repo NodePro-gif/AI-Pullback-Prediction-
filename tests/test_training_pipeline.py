@@ -59,6 +59,7 @@ def test_training_pipeline_separates_train_calibration_evaluation_and_final_test
         artifact_path,
         horizon_bars=2,
         max_iter=5,
+        timeframe="M1",
     )
     artifact = joblib.load(artifact_path)
 
@@ -66,6 +67,7 @@ def test_training_pipeline_separates_train_calibration_evaluation_and_final_test
     assert observed["calibration_index"].equals(calibration_index)
     assert observed["dataset_indices"][2].equals(evaluation_index)
     assert observed["development_index"].max() < pd.Timestamp("2024-01-01", tz="UTC")
+    assert artifact["timeframe"] == "M1"
     assert artifact["training_period"] == "2015-01-01 through 2020-12-31"
     assert artifact["calibration_period"] == "2021-01-01 through 2022-12-31"
     assert artifact["evaluation_period"] == "2023-01-01 through 2023-12-31"
