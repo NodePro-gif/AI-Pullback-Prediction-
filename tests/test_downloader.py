@@ -7,7 +7,10 @@ from pullback_prediction.data.downloader import download_dukascopy_bid_ask
 
 def test_downloader_fetches_bid_and_ask_without_overwriting_raw_files(tmp_path, monkeypatch):
     calls = []
-    monkeypatch.setattr("pullback_prediction.data.downloader.shutil.which", lambda _: "/usr/bin/npx")
+    monkeypatch.setattr(
+        "pullback_prediction.data.downloader.shutil.which",
+        lambda _: "/usr/bin/npx",
+    )
 
     def fake_run(command, check):
         calls.append(command)
