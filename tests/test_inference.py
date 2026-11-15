@@ -56,3 +56,44 @@ def test_predict_frame_abstains_when_confidence_is_below_threshold(tmp_path):
     result = predict_frame(candles, artifact, min_probability=0.80)
 
     assert result["signal"].eq(0).all()
+
+
+
+def test_predict_frame_uses_saved_probability_calibrators(tmp_path):
+    from pullback_prediction.training.calibration import fit_probability_calibrators
+
+    candles = sample_candles()
+    columns = list(build_features(candles).columns)
+    raw_probabilities = np.array(
+        [
+            [0.70, 0.20, 0.10],
+            [0.60, 0.30, 0.10],
+            [0.10, 0.20, 0.70],
+            [0.10, 0.30, 0.60],
+            [0.20, 0.70, 0.10],
+            [0.30, 0.60, 0.10],
+        ]
+    )
+    calibrators = fit_probability_calibrators(
+        raw_probabilities,
+        np.array([-1, -1, 1, 1, 0, 0]),
+        np.array([-1, 0, 1]),
+    )
+    artifact = tmp_path / "calibrated_model.joblib"
+    joblib.dump(
+        {
+            "model": FixedProbabilityModel(),
+            "feature_columns": columns,
+            "calibrators": calibrators,
+            "calibration_classes": [-1, 0, 1],
+        },
+        artifact,
+    )
+
+    result = predict_frame(candles, artifact, min_probability=0.0)
+
+    assert result["probabilities_calibrated"].all()
+    assert np.allclose(
+        result[["prob_sell", "prob_wait", "prob_buy"]].sum(axis=1),
+        1.0,
+    )
