@@ -99,7 +99,9 @@ def walk_forward_command(
     output_dir: Path = typer.Option(Path("artifacts/walk_forward"), "--output-dir"),
     n_splits: int = typer.Option(5, "--n-splits", min=2),
     horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
-    barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
+    barrier_atr_multiple: float = typer.Option(
+        1.5, "--barrier-atr-multiple", min=0.01
+    ),
     gap_bars: int | None = typer.Option(None, "--gap-bars", min=0),
     max_iter: int = typer.Option(200, "--max-iter", min=1),
 ) -> None:
@@ -111,7 +113,9 @@ def walk_forward_command(
         raise typer.BadParameter("No development data exists before the final-test period.")
     effective_gap = horizon_bars if gap_bars is None else gap_bars
     if effective_gap < horizon_bars:
-        raise typer.BadParameter("gap-bars must be at least horizon-bars to prevent label leakage.")
+        raise typer.BadParameter(
+            "gap-bars must be at least horizon-bars to prevent label leakage."
+        )
     features = build_features(development)
     labels = make_barrier_labels(
         development,
@@ -130,7 +134,10 @@ def walk_forward_command(
     summary_path = output_dir / "summary.json"
     folds_path = output_dir / "folds.csv"
     summary_path.write_text(
-        json.dumps(result["summary"], indent=2, sort_keys=True, allow_nan=False) + "\\n",
+        json.dumps(
+            result["summary"], indent=2, sort_keys=True, allow_nan=False
+        )
+        + "\n",
         encoding="utf-8",
     )
     pd.DataFrame(result["folds"]).to_csv(folds_path, index=False)
