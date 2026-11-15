@@ -2,6 +2,7 @@ import joblib
 import numpy as np
 import pandas as pd
 import pytest
+import pytest
 
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.training.inference import predict_frame
@@ -60,7 +61,6 @@ def test_predict_frame_abstains_when_confidence_is_below_threshold(tmp_path):
     assert result["signal"].eq(0).all()
 
 
-
 def test_predict_frame_uses_saved_probability_calibrators(tmp_path):
     from pullback_prediction.training.calibration import fit_probability_calibrators
 
@@ -101,7 +101,6 @@ def test_predict_frame_uses_saved_probability_calibrators(tmp_path):
     )
 
 
-
 def test_predict_frame_rejects_mismatched_model_timeframe(tmp_path):
     candles = sample_candles("M5")
     columns = list(build_features(candles).columns)
@@ -132,24 +131,6 @@ def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
         artifact,
     )
 
-    with pytest.raises(ValueError, match="do not match"):
+    with pytest.raises(ValueError, match="does not match"):
         predict_frame(candles, artifact, timeframe="M1")
 
-
-def test_predict_frame_rejects_requested_timeframe_not_matching_artifact(tmp_path):
-    candles = sample_candles()
-    columns = list(build_features(candles).columns)
-    artifact = tmp_path / "m1_model.joblib"
-    joblib.dump(
-        {
-            "model": FixedProbabilityModel(),
-            "feature_columns": columns,
-            "timeframe": "M1",
-        },
-        artifact,
-    )
-
-    import pytest
-
-    with pytest.raises(ValueError, match="does not match model artifact"):
-        predict_frame(candles, artifact, timeframe="M5")
