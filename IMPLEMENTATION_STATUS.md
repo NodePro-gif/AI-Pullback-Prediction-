@@ -6,7 +6,7 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 |---|---|---|
 | Repository and project contract | verified | README and hard constraints committed |
 | Python package metadata and dependencies | implemented, unverified | CI dependency installation |
-| CLI for downloading, validation, Parquet preparation, splitting, training, prediction, and backtesting | implemented, unverified | Prepare-data and backtest smoke tests pass; full workflow smoke test pending |
+| CLI for downloading, validation, Parquet preparation, splitting, training, prediction, walk-forward evaluation, and backtesting | implemented, unverified | Prepare-data and backtest smoke tests pass; walk-forward CLI test pending |
 | Cost-aware bid/ask backtest engine | verified | Long/short fills, costs, ambiguous bars, and drawdown tests pass in CI |
 | Backtest CLI | verified | Parquet-to-trades/summary smoke test passes; real-data run pending |
 | Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI, including Unix-millisecond timestamps |
@@ -16,12 +16,15 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | Fixed chronological partitions | verified | Boundary tests pass in CI |
 | Causal technical/microstructure features | verified | Future-perturbation leakage test passes in CI |
 | ATR first-touch barrier labels | verified | First-touch, ambiguous-bar and censoring tests pass in CI |
-| HistGradientBoosting baseline | verified | 14 tests and Ruff pass on Python 3.11/3.12; full market-data training run pending |
-| Model inference and confidence abstention | verified | Class-probability mapping and abstention tests pass in CI; scores remain uncalibrated |
+| HistGradientBoosting baseline | implemented, unverified at data scale | Fit on 2015–2020; full Dukascopy training run pending |
+| Model inference and confidence abstention | verified | Calibrated probability mapping and abstention tests pass in CI |
 | XGBoost baseline | pending | Later model comparison candidate |
 | LSTM and Transformer | pending | Sequence windows, masks, reproducibility and walk-forward checks |
 | Regime detector and meta-learner | pending | Walk-forward calibration tests |
-| Probability calibration and WAIT policy | pending | Reliability, expected-value and abstention tests |
+| Isotonic probability calibration | verified | Fit on 2021–2022 and evaluate on 2023; probability simplex and inference tests pass |
+| Calibrated WAIT/abstention policy | implemented, unverified at data scale | Configurable confidence threshold; calibration and backtest analysis on real data pending |
+| Expanding-window walk-forward evaluation | verified | Chronological TimeSeriesSplit folds, candle-based leakage gap and unit tests pass |
+| Walk-forward CLI | implemented, unverified | CLI test excludes 2024+ final test rows; latest CI pending |
 | Cost-aware backtester | pending | Hand-calculated bid/ask trade fixtures |
 | FastAPI service | pending | API contract tests |
 | Streamlit dashboard | pending | Launch and smoke test |
