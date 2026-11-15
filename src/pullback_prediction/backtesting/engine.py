@@ -82,7 +82,7 @@ def backtest_signals(
     for side in ("bid", "ask"):
         side_frame = candles[
             [f"{side}_{field}" for field in ("open", "high", "low", "close")]
-        ]
+        ].rename(columns=lambda column: column.removeprefix(f"{side}_"))
         expected_high = side_frame[["open", "close", "low"]].max(axis=1)
         expected_low = side_frame[["open", "close", "high"]].min(axis=1)
         if (
