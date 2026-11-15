@@ -20,6 +20,12 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+xgboost = [
+  "xgboost>=2.0,<4",
+]
+deep-learning = [
+  "torch>=2.2",
+]
 ml = [
   "xgboost>=2.0,<4",
   "torch>=2.2",
