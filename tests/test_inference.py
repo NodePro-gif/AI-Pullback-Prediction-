@@ -13,8 +13,9 @@ class FixedProbabilityModel:
         return np.tile(np.array([[0.70, 0.20, 0.10]]), (len(features), 1))
 
 
-def sample_candles():
-    index = pd.date_range("2024-01-01", periods=220, freq="min", tz="UTC")
+def sample_candles(timeframe="M1"):
+    frequency = "min" if timeframe == "M1" else "5min"
+    index = pd.date_range("2024-01-01", periods=220, freq=frequency, tz="UTC")
     close = 2000 + np.arange(len(index), dtype=float) * 0.02
     frame = pd.DataFrame(index=index)
     for side, offset in (("bid", 0.0), ("ask", 0.2)):
@@ -97,3 +98,21 @@ def test_predict_frame_uses_saved_probability_calibrators(tmp_path):
         result[["prob_sell", "prob_wait", "prob_buy"]].sum(axis=1),
         1.0,
     )
+
+
+
+def test_predict_frame_rejects_mismatched_model_timeframe(tmp_path):
+    candles = sample_candles("M5")
+    columns = list(build_features(candles).columns)
+    artifact = tmp_path / "m1_model.joblib"
+    joblib.dump(
+        {
+            "model": FixedProbabilityModel(),
+            "feature_columns": columns,
+            "timeframe": "M1",
+        },
+        artifact,
+    )
+
+    with pytest.raises(ValueError, match="does not match model artifact"):
+        predict_frame(candles, artifact, timeframe="M5")
