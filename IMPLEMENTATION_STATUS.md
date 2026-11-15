@@ -19,7 +19,7 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
 | Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
 | Sequence window generation | verified by unit tests | Chronological trailing windows; invalid windows dropped |
-| LSTM / Transformer training | implemented, unverified | CUDA/MPS auto-selection, CUDA AMP, batched validation, class weighting, gradient clipping and early stopping; PyTorch runtime test is optional and skipped in base CI; fold integration and inference export pending |
+| LSTM / Transformer training and inference | implemented, unverified | Leakage-aware 2015–2020 fit, train-only scaler, 2021–2022 early stopping/calibration, 2023 evaluation; CUDA/MPS selection, CUDA AMP, batched training, class weighting, gradient clipping, early stopping; separate PyTorch checkpoint plus joblib metadata; CLI train-sequence and sequence inference path; full GPU/data-scale run and end-to-end checkpoint test pending |
 | Train-only market regime detector | verified in CI | MiniBatchKMeans/standardization fit on 2015–2020 only; assignments for later periods; CLI artifact and parquet export |
 | Calibrated OOF stacked meta-learner | verified in CI | Expanding-window OOF base probabilities with horizon gap; logistic meta-model; calibration 2021–2022; evaluation 2023; labels confined to their date partitions |
 | Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
