@@ -92,6 +92,14 @@ pullback-predict benchmark-models --input data/processed/XAUUSD_M1.parquet --out
 
 The benchmark writes per-model fold CSVs and aggregate metrics. Install `.[xgboost]` for XGBoost without installing PyTorch; install `.[deep-learning]` separately for PyTorch sequence models. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
 
+Fit unsupervised market regimes using only the 2015–2020 training partition. The saved scaler and cluster centers are then applied to all rows without refitting on validation or final-test data:
+
+```bash
+pullback-predict fit-regimes --input data/processed/XAUUSD_M1.parquet --output-dir artifacts/regimes_m1 --n-regimes 4
+```
+
+The command writes a reusable detector artifact and a parquet file with `regime_id` and `regime_distance`. Regime IDs are cluster identifiers, not guaranteed bullish/bearish labels.
+
 Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping, early stopping, batched validation to limit GPU memory, and automatic mixed precision on CUDA:
 
 ```python
