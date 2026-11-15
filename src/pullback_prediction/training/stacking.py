@@ -31,7 +31,7 @@ class StackedPullbackClassifier:
         gap_bars: int = 12,
         max_iter: int = 200,
         random_state: int = 42,
-    ) -> "StackedPullbackClassifier":
+    ) -> StackedPullbackClassifier:
         """Generate chronological OOF scores, fit meta-model, then refit base model."""
         if not features.index.equals(labels.index):
             raise ValueError("Features and labels must have identical indexes.")
