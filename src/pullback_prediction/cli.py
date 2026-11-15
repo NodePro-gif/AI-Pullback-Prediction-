@@ -15,6 +15,7 @@ from pullback_prediction.data.loader import (
 from pullback_prediction.data.splits import chronological_split
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.labels.barriers import make_barrier_labels
+from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.baseline import train_baseline_from_frame
 from pullback_prediction.training.inference import predict_frame
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
@@ -147,6 +148,59 @@ def walk_forward_command(
     typer.echo(f"folds_path={folds_path}")
     for key, value in result["summary"].items():
         typer.echo(f"{key}={value}")
+
+@app.command("benchmark-models")
+def benchmark_models_command(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    output_dir: Path = typer.Option(Path("artifacts/model_benchmark"), "--output-dir"),
+    n_splits: int = typer.Option(5, "--n-splits", min=2),
+    horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
+    barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
+    gap_bars: int | None = typer.Option(None, "--gap-bars", min=0),
+    max_iter: int = typer.Option(200, "--max-iter", min=1),
+    include_xgboost: bool = typer.Option(True, "--xgboost/--no-xgboost"),
+) -> None:
+    """Compare tabular models on expanding folds; never use 2024+ final test."""
+    frame = pd.read_parquet(input)
+    partitions = chronological_split(frame)
+    development = pd.concat([partitions["train"], partitions["validation"]])
+    if development.empty:
+        raise typer.BadParameter("No development data exists before final-test period.")
+    effective_gap = horizon_bars if gap_bars is None else gap_bars
+    if effective_gap < horizon_bars:
+        raise typer.BadParameter("gap-bars must be at least horizon-bars.")
+    features = build_features(development)
+    labels = make_barrier_labels(
+        development,
+        features["atr_14"],
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+    )
+    result = benchmark_tabular_models(
+        features,
+        labels,
+        n_splits=n_splits,
+        gap_bars=effective_gap,
+        max_iter=max_iter,
+        include_xgboost=include_xgboost,
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
+    (output_dir / "summary.json").write_text(
+        json.dumps(result["summary"], indent=2, sort_keys=True, allow_nan=False) + "\\n",
+        encoding="utf-8",
+    )
+    for name, folds in result["folds"].items():
+        pd.DataFrame(folds).to_csv(output_dir / f"{name}_folds.csv", index=False)
+    (output_dir / "skipped.json").write_text(
+        json.dumps(result["skipped"], indent=2, sort_keys=True) + "\\n",
+        encoding="utf-8",
+    )
+    typer.echo(f"output_dir={output_dir}")
+    for name, metrics in result["summary"].items():
+        typer.echo(f"{name}={json.dumps(metrics, sort_keys=True)}")
+    for name, reason in result["skipped"].items():
+        typer.echo(f"skipped_{name}={reason}")
+
 
 @app.command("train-baseline")
 def train_baseline(
