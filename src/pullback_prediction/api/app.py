@@ -7,6 +7,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
@@ -65,10 +66,25 @@ def predict(request: PredictionRequest) -> list[Prediction]:
         raise HTTPException(status_code=503, detail="Model artifact is not configured.")
     frame = pd.DataFrame([item.dict() for item in request.candles])
     frame = frame.set_index("timestamp")
+    if not isinstance(frame.index, pd.DatetimeIndex) or frame.index.tz is None:
+        raise HTTPException(status_code=422, detail="Timestamps must include a timezone.")
     if frame.index.has_duplicates:
         raise HTTPException(status_code=422, detail="Candle timestamps must be unique.")
     if not frame.index.is_monotonic_increasing:
         raise HTTPException(status_code=422, detail="Candle timestamps must be chronological.")
+    frame.index = frame.index.tz_convert("UTC")
+    price_columns = [column for column in frame if column != "volume"]
+    if not np.isfinite(frame[price_columns].to_numpy(dtype=float)).all():
+        raise HTTPException(status_code=422, detail="Candle prices must be finite.")
+    for side in ("bid", "ask"):
+        if (
+            (frame[f"{side}_high"] < frame[[f"{side}_open", f"{side}_close", f"{side}_low"]].max(axis=1)).any()
+            or (frame[f"{side}_low"] > frame[[f"{side}_open", f"{side}_close", f"{side}_high"]].min(axis=1)).any()
+        ):
+            raise HTTPException(status_code=422, detail=f"Invalid {side} OHLC candle.")
+    for field in ("open", "high", "low", "close"):
+        if (frame[f"ask_{field}"] < frame[f"bid_{field}"]).any():
+            raise HTTPException(status_code=422, detail="Ask prices cannot be below bid prices.")
     try:
         result = predict_frame(frame, MODEL_PATH, min_probability=MIN_PROBABILITY)
     except (ValueError, KeyError, TypeError) as exc:
