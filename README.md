@@ -83,6 +83,32 @@ pullback-predict walk-forward --input data/processed/XAUUSD_M1.parquet --output-
 
 The command writes fold-level metrics and an aggregate `summary.json`.
 
+Compare HistGradientBoosting and optional XGBoost using the same chronological folds:
+
+```bash
+pip install -e ".[ml]"
+pullback-predict benchmark-models --input data/processed/XAUUSD_M1.parquet --output-dir artifacts/benchmark_m1 --n-splits 5 --horizon-bars 12
+```
+
+The benchmark writes per-model fold CSVs and aggregate metrics. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
+
+## Research dashboard and API
+
+Install the optional interfaces:
+
+```bash
+pip install -e ".[api,dashboard]"
+streamlit run dashboard/app.py
+```
+
+Start the read-only API after placing a trained artifact at the configured path:
+
+```bash
+PULLBACK_MODEL_PATH=artifacts/xauusd_baseline.joblib uvicorn pullback_prediction.api.app:app --host 0.0.0.0 --port 8000
+```
+
+The API exposes `GET /health` and `POST /predict`; it has no broker or order endpoint. For a container image, run `docker build -t pullback-api .` and mount the trained artifact at `/app/artifacts/xauusd_baseline.joblib`. Do not expose the research API publicly without adding authentication, TLS, rate limits, and operational monitoring.
+
 Generate out-of-sample or validation predictions from a saved model. New artifacts apply the 2021–2022 isotonic calibrators before the abstention threshold; older artifacts without calibrators use raw model scores:
 
 ```bash
