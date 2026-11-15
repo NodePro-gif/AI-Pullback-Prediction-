@@ -100,3 +100,80 @@ def load_dukascopy_csv(path: str | Path, timeframe: str) -> pd.DataFrame:
         raise MarketDataError("Rows are more frequent than the selected timeframe.")
 
     return frame
+
+
+def load_dukascopy_bid_ask_pair(
+    bid_path: str | Path,
+    ask_path: str | Path,
+    timeframe: str,
+) -> pd.DataFrame:
+    """Load separate Dukascopy bid and ask OHLC exports and align by timestamp.
+
+    Each file may use generic OHLC names (Open/High/Low/Close) or explicit
+    side-specific names. A timestamp mismatch is rejected instead of silently
+    forward-filling one side.
+    """
+    if timeframe not in {"M1", "M5"}:
+        raise MarketDataError(f"Unsupported timeframe {timeframe!r}; expected M1 or M5.")
+
+    def read_side(path: str | Path, side: str) -> pd.DataFrame:
+        raw = pd.read_csv(path)
+        normalized = {
+            str(column).strip().lower().replace(" ", "_"): str(column)
+            for column in raw.columns
+        }
+        time_aliases = ("timestamp", "time", "datetime", "date", "gmt_time")
+        time_column = next((normalized[name] for name in time_aliases if name in normalized), None)
+        if time_column is None:
+            raise MarketDataError(f"{side} file has no recognized timestamp column.")
+
+        side_mapping = {}
+        for field in ("open", "high", "low", "close"):
+            aliases = (
+                (f"{side}_{field}", f"{field}_{side}", f"{side}{field}", field)
+            )
+            source_column = next(
+                (normalized[name] for name in aliases if name in normalized), None
+            )
+            if source_column is None:
+                raise MarketDataError(f"{side} file is missing {field} price.")
+            side_mapping[source_column] = f"{side}_{field}"
+
+        result = raw[[time_column, *side_mapping]].rename(
+            columns={time_column: "timestamp", **side_mapping}
+        )
+        result["timestamp"] = pd.to_datetime(
+            result["timestamp"], utc=True, errors="coerce"
+        )
+        if result["timestamp"].isna().any():
+            raise MarketDataError(f"{side} file contains invalid timestamps.")
+        price_columns = [f"{side}_{field}" for field in ("open", "high", "low", "close")]
+        for column in price_columns:
+            result[column] = pd.to_numeric(result[column], errors="coerce")
+        if result[price_columns].isna().any().any() or (result[price_columns] <= 0).any().any():
+            raise MarketDataError(f"{side} file contains missing, non-numeric, or non-positive prices.")
+        invalid = (
+            (result[f"{side}_high"] < result[[f"{side}_open", f"{side}_close", f"{side}_low"]].max(axis=1))
+            | (result[f"{side}_low"] > result[[f"{side}_open", f"{side}_close", f"{side}_high"]].min(axis=1))
+        )
+        if invalid.any():
+            raise MarketDataError(f"{side} OHLC invariant violated.")
+        result = result.set_index("timestamp").sort_index()
+        if result.index.has_duplicates:
+            raise MarketDataError(f"{side} file contains duplicate timestamps.")
+        return result
+
+    bid = read_side(bid_path, "bid")
+    ask = read_side(ask_path, "ask")
+    if not bid.index.equals(ask.index):
+        raise MarketDataError("Bid and ask timestamps do not match exactly.")
+
+    result = bid.join(ask, how="inner")
+    if (result["ask_close"] < result["bid_close"]).any():
+        raise MarketDataError("Ask close is below bid close; check source files.")
+
+    expected = pd.Timedelta(minutes=1 if timeframe == "M1" else 5)
+    gaps = result.index.to_series().diff().dropna()
+    if (gaps < expected).any():
+        raise MarketDataError("Rows are more frequent than the selected timeframe.")
+    return result
