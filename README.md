@@ -92,7 +92,7 @@ pullback-predict benchmark-models --input data/processed/XAUUSD_M1.parquet --out
 
 The benchmark writes per-model fold CSVs and aggregate metrics. Install `.[xgboost]` for XGBoost without installing PyTorch; install `.[deep-learning]` separately for PyTorch sequence models. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
 
-Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping and early stopping:
+Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping, early stopping, batched validation to limit GPU memory, and automatic mixed precision on CUDA:
 
 ```python
 from pullback_prediction.training.sequence import (
