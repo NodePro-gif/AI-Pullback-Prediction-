@@ -254,5 +254,6 @@ def train_sequence_model(
         "history": history,
         "best_validation_loss": best_loss,
         "epochs_completed": len(history),
-        "device": str(target_device),\n        "classes": [int(value) for value in unique],
+        "device": str(target_device),
+        "classes": [int(value) for value in unique],
     }
