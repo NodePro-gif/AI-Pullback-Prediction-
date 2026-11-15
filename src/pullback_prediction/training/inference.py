@@ -1,0 +1,71 @@
+"""Model inference and confidence-based abstention."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any
+
+import joblib
+import numpy as np
+import pandas as pd
+
+from pullback_prediction.features.technical import build_features
+
+
+def predict_frame(
+    candles: pd.DataFrame,
+    artifact_path: str | Path,
+    *,
+    min_probability: float = 0.60,
+) -> pd.DataFrame:
+    """Return class probabilities and BUY/SELL/WAIT signals for each candle.
+
+    The model's raw class probabilities are not calibrated probabilities.
+    The threshold is a configurable abstention gate, not a profitability claim.
+    """
+    if not 0.0 <= min_probability <= 1.0:
+        raise ValueError("min_probability must be between 0 and 1.")
+
+    artifact: dict[str, Any] = joblib.load(artifact_path)
+    model = artifact.get("model")
+    feature_columns = artifact.get("feature_columns")
+    if model is None or not feature_columns:
+        raise ValueError("Model artifact must contain model and feature_columns.")
+
+    features = build_features(candles)
+    missing = set(feature_columns).difference(features.columns)
+    if missing:
+        raise ValueError(f"Missing model features: {', '.join(sorted(missing))}")
+    matrix = features.loc[:, feature_columns]
+    probabilities = np.asarray(model.predict_proba(matrix), dtype=float)
+    classes = np.asarray(model.classes_, dtype=int)
+    if probabilities.shape != (len(candles), len(classes)):
+        raise ValueError("Model probability output has an unexpected shape.")
+
+    best_indices = probabilities.argmax(axis=1)
+    predicted_class = classes[best_indices]
+    confidence = probabilities.max(axis=1)
+    signal = np.where(
+        (confidence >= min_probability) & (predicted_class != 0),
+        predicted_class,
+        0,
+    ).astype("int8")
+
+    result = pd.DataFrame(
+        {
+            "signal": signal,
+            "predicted_class": predicted_class.astype("int8"),
+            "confidence": confidence,
+            "prob_sell": 0.0,
+            "prob_wait": 0.0,
+            "prob_buy": 0.0,
+            "atr_14": features["atr_14"],
+        },
+        index=candles.index,
+    )
+    probability_columns = {-1: "prob_sell", 0: "prob_wait", 1: "prob_buy"}
+    for position, class_value in enumerate(classes):
+        column = probability_columns.get(int(class_value))
+        if column is not None:
+            result[column] = probabilities[:, position]
+    return result
