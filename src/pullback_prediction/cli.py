@@ -1,6 +1,8 @@
 """Command-line interface for data preparation, training, prediction, and evaluation."""
 
 import json
+
+import joblib
 from pathlib import Path
 
 import pandas as pd
@@ -18,6 +20,7 @@ from pullback_prediction.labels.barriers import make_barrier_labels
 from pullback_prediction.training.baseline import train_baseline_from_frame
 from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.inference import predict_frame
+from pullback_prediction.training.regime import RegimeDetector
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
@@ -210,6 +213,41 @@ def benchmark_models_command(
         typer.echo(f"{name}={json.dumps(metrics, sort_keys=True)}")
     for name, reason in result["skipped"].items():
         typer.echo(f"skipped_{name}={reason}")
+
+
+@app.command("fit-regimes")
+def fit_regimes_command(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    output_dir: Path = typer.Option(Path("artifacts/regimes"), "--output-dir"),
+    n_regimes: int = typer.Option(4, "--n-regimes", min=2),
+) -> None:
+    """Fit market regimes on 2015–2020 only, then assign all available candles."""
+    frame = pd.read_parquet(input)
+    partitions = chronological_split(frame)
+    training = partitions["train"]
+    if training.empty:
+        raise typer.BadParameter("Training partition 2015–2020 is empty.")
+    features = build_features(frame)
+    training_features = features.loc[training.index]
+    detector = RegimeDetector.fit(training_features, n_regimes=n_regimes)
+    assignments = detector.transform(features)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    model_path = output_dir / "regime_detector.joblib"
+    assignments_path = output_dir / "regime_assignments.parquet"
+    joblib.dump(
+        {
+            "detector": detector,
+            "training_period": "2015-01-01 through 2020-12-31",
+            "fit_rows": int(assignments.loc[training.index, "regime_id"].notna().sum()),
+            "n_regimes": n_regimes,
+        },
+        model_path,
+    )
+    assignments.to_parquet(assignments_path)
+    typer.echo(f"model_path={model_path}")
+    typer.echo(f"assignments_path={assignments_path}")
+    typer.echo(f"fit_rows={int(assignments.loc[training.index, 'regime_id'].notna().sum())}")
+    typer.echo(f"assigned_rows={int(assignments['regime_id'].notna().sum())}")
 
 
 @app.command("train-baseline")
