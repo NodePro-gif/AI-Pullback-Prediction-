@@ -25,7 +25,9 @@ if uploaded is not None:
             try:
                 predictions = predict_frame(candles, model_path, min_probability=threshold)
                 if not predictions["probabilities_calibrated"].all():
-                    st.warning("This artifact returns raw model scores, not calibrated probabilities.")
+                    st.warning(
+                        "This artifact returns raw model scores, not calibrated probabilities."
+                    )
                 counts = predictions["signal"].value_counts()
                 left, middle, right = st.columns(3)
                 left.metric("BUY", int(counts.get(1, 0)))
