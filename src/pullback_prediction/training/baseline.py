@@ -108,6 +108,15 @@ def train_baseline_from_frame(
     """Train 2015–2020, calibrate 2021–2022, evaluate 2023; exclude final test."""
     if timeframe not in {None, "M1", "M5"}:
         raise ValueError("timeframe must be M1 or M5.")
+    if timeframe is not None:
+        if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
+            raise ValueError("Candle index must contain timezone-aware timestamps.")
+        expected_interval = pd.Timedelta(
+            60 if timeframe == "M1" else 300, unit="s"
+        )
+        median_interval = candles.index.to_series().diff().dropna().median()
+        if median_interval != expected_interval:
+            raise ValueError("Candle spacing does not match the requested timeframe.")
     partitions = chronological_split(candles)
     train_candles = partitions["train"]
     validation_candles = partitions["validation"]
