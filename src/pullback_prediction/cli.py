@@ -21,6 +21,7 @@ from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.inference import predict_frame
 from pullback_prediction.training.regime import RegimeDetector
 from pullback_prediction.training.stacking import train_stacked_from_frame
+from pullback_prediction.training.sequence_pipeline import train_sequence_from_frame
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
@@ -297,6 +298,40 @@ def train_stacked_command(
         n_splits=n_splits,
         gap_bars=gap_bars,
         max_iter=max_iter,
+    )
+    for key, value in result.items():
+        typer.echo(f"{key}={value}")
+
+
+@app.command("train-sequence")
+def train_sequence_command(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    output: Path = typer.Option(Path("artifacts/xauusd_sequence.joblib"), "--output"),
+    architecture: str = typer.Option("lstm", "--architecture"),
+    timeframe: str = typer.Option("M1", "--timeframe"),
+    sequence_length: int = typer.Option(128, "--sequence-length", min=2),
+    horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
+    barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
+    hidden_dim: int = typer.Option(96, "--hidden-dim", min=8),
+    num_layers: int = typer.Option(2, "--num-layers", min=1),
+    dropout: float = typer.Option(0.15, "--dropout", min=0.0, max=0.9),
+    epochs: int = typer.Option(30, "--epochs", min=1),
+    batch_size: int = typer.Option(512, "--batch-size", min=1),
+    learning_rate: float = typer.Option(1e-3, "--learning-rate", min=0.0),
+    patience: int = typer.Option(5, "--patience", min=1),
+    device: str | None = typer.Option(None, "--device"),
+    mixed_precision: bool = typer.Option(True, "--mixed-precision/--no-mixed-precision"),
+    num_workers: int = typer.Option(0, "--num-workers", min=0),
+) -> None:
+    """Train LSTM/Transformer on 2015–2020; calibrate 2021–2022; evaluate 2023."""
+    frame = pd.read_parquet(input)
+    result = train_sequence_from_frame(
+        frame, output, architecture=architecture, timeframe=timeframe,
+        sequence_length=sequence_length, horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple, hidden_dim=hidden_dim,
+        num_layers=num_layers, dropout=dropout, epochs=epochs,
+        batch_size=batch_size, learning_rate=learning_rate, patience=patience,
+        device=device, mixed_precision=mixed_precision, num_workers=num_workers,
     )
     for key, value in result.items():
         typer.echo(f"{key}={value}")
