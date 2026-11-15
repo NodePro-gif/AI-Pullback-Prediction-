@@ -53,6 +53,14 @@ pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --outpu
 
 The command writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is excluded. Run separately for M5 data.
 
+Backtest a parquet file containing a `signal` column (-1 short, 0 wait, +1 long) and `atr_14` alongside bid/ask OHLC:
+
+```bash
+pullback-predict backtest-signals --input data/processed/XAUUSD_M1_signals.parquet --output-dir artifacts/backtest_m1 --slippage-price 0.05
+```
+
+The simulator enters at the next candle open, uses ask for long entries and bid for short entries, and exits against the opposite quote. Stop/target collisions within one candle are resolved conservatively as stop-loss first. PnL is price units per unit, not account currency or lot sizing.
+
 ## Planned architecture
 
 1. **Data:** Dukascopy bid/ask ingestion, integrity checks, resampling, spread and session metadata.
