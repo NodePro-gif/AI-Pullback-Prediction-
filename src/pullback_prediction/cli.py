@@ -1,4 +1,4 @@
-"""Command-line interface for data validation, preparation, and baseline training."""
+"""Command-line interface for data preparation, training, prediction, and evaluation."""
 
 import json
 from pathlib import Path
@@ -90,6 +90,7 @@ def predict_command(
     typer.echo(f"sell_signals={int((predictions['signal'] == -1).sum())}")
     typer.echo(f"wait_signals={int((predictions['signal'] == 0).sum())}")
     typer.echo(f"output={output}")
+
 
 @app.command("backtest-signals")
 def backtest_signals_command(
