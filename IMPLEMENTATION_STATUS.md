@@ -19,7 +19,7 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
 | Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
 | Sequence window generation | verified by unit tests | Chronological trailing windows; invalid windows dropped |
-| LSTM / Transformer training | implemented, unverified | CUDA/MPS auto-selection, class weighting, gradient clipping and early stopping; PyTorch optional test skipped in base CI; fold integration and inference export pending |
+| LSTM / Transformer training | implemented, unverified | CUDA/MPS auto-selection, CUDA AMP, batched validation, class weighting, gradient clipping and early stopping; PyTorch runtime test is optional and skipped in base CI; fold integration and inference export pending |
 | Regime detector and meta-learner | pending | Requires out-of-fold predictions and separate calibration |
 | Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
 
