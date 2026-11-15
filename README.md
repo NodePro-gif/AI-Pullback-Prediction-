@@ -107,35 +107,22 @@ pullback-predict train-stacked --input data/processed/XAUUSD_M1.parquet --output
 pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_stacked.joblib --output data/processed/XAUUSD_M1_stacked_signals.parquet --timeframe M1
 ```
 
-Optional PyTorch sequence utilities provide trailing-window construction and LSTM/Transformer classifiers. Training automatically selects CUDA when available, otherwise Apple MPS or CPU; it uses weighted cross-entropy, gradient clipping, early stopping, batched validation to limit GPU memory, and automatic mixed precision on CUDA:
+Train an end-to-end LSTM or Transformer sequence model. The pipeline fits its feature scaler on training rows only, trains on 2015–2020, uses 2021–2022 for early stopping and probability calibration, and reports 2023 evaluation metrics. It never opens 2024+ final-test rows. PyTorch is optional:
 
-```python
-from pullback_prediction.training.sequence import (
-    build_sequence_model,
-    make_sequence_windows,
-    train_sequence_model,
-)
-
-# Build windows independently inside train and validation partitions.
-train_windows = make_sequence_windows(train_features, train_labels, sequence_length=128)
-valid_windows = make_sequence_windows(valid_features, valid_labels, sequence_length=128)
-model = build_sequence_model(
-    "transformer",
-    n_features=train_windows.features.shape[-1],
-    n_classes=len(set(train_windows.labels.tolist())),
-)
-result = train_sequence_model(
-    model,
-    train_windows.features,
-    train_windows.labels,
-    valid_windows.features,
-    valid_windows.labels,
-)
-print(result["device"], result["best_validation_loss"])
+```bash
+pip install -e ".[deep-learning]"
+pullback-predict train-sequence --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_m1_lstm.joblib --architecture lstm --timeframe M1 --sequence-length 128 --epochs 30 --batch-size 512
 ```
 
-Sequence training is a research component; model artifact export and production inference integration remain pending.
+Use `--architecture transformer` for a Transformer. On a CUDA runtime (including a compatible Kaggle GPU session), pass `--device cuda`; CUDA mixed precision is enabled by default and can be disabled with `--no-mixed-precision`. Without CUDA, the trainer selects Apple MPS when available, otherwise CPU. Batch size and sequence length should be adjusted to available GPU memory.
 
+Each run writes a joblib metadata artifact, a sibling `.pt` model checkpoint, and a `.metrics.json` report. Keep the two model files together. Generate BUY/SELL/WAIT predictions with the same artifact:
+
+```bash
+pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_m1_lstm.joblib --output data/processed/XAUUSD_M1_lstm_signals.parquet --timeframe M1
+```
+
+Sequence inference aligns each prediction to the final candle in its trailing window; the initial warm-up rows abstain with WAIT. GPU execution and full-history model quality still require measurement on the target runtime and real Dukascopy data.
 
 ## Research dashboard and API
 
