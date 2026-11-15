@@ -151,3 +151,49 @@ def test_walk_forward_cli_never_includes_final_test_partition(tmp_path, monkeypa
     assert (output_dir / "folds.csv").exists()
     summary = json.loads((output_dir / "summary.json").read_text(encoding="utf-8"))
     assert summary["folds"] == 2
+
+
+def test_fit_regimes_cli_fits_only_training_partition(tmp_path, monkeypatch):
+    import numpy as np
+    import joblib
+
+    from pullback_prediction import cli
+    from pullback_prediction.training.regime import DEFAULT_REGIME_FEATURES
+
+    train_index = pd.date_range("2015-01-01", periods=240, freq="min", tz="UTC")
+    validation_index = pd.date_range("2021-01-01", periods=4, freq="min", tz="UTC")
+    test_index = pd.date_range("2024-01-01", periods=4, freq="min", tz="UTC")
+    index = train_index.append(validation_index).append(test_index)
+    source = tmp_path / "candles.parquet"
+    pd.DataFrame({"placeholder": range(len(index))}, index=index).to_parquet(source)
+
+    rng = np.random.default_rng(12)
+    values = rng.normal(size=(len(index), len(DEFAULT_REGIME_FEATURES)))
+    values[:, 0] = np.exp(values[:, 0]) * 0.001
+    values[:, 1] = np.abs(values[:, 1]) * 0.0001
+    values[:, 2] = np.abs(values[:, 2]) * 0.0002
+    features = pd.DataFrame(values, index=index, columns=DEFAULT_REGIME_FEATURES)
+    features.iloc[:5] = np.nan
+    monkeypatch.setattr(cli, "build_features", lambda frame: features)
+
+    output_dir = tmp_path / "regimes"
+    result = CliRunner().invoke(
+        app,
+        [
+            "fit-regimes",
+            "--input",
+            str(source),
+            "--output-dir",
+            str(output_dir),
+            "--n-regimes",
+            "3",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    artifact = joblib.load(output_dir / "regime_detector.joblib")
+    assert artifact["n_regimes"] == 3
+    assert artifact["fit_rows"] == 235
+    assignments = pd.read_parquet(output_dir / "regime_assignments.parquet")
+    assert assignments.index.equals(index)
+    assert assignments.loc[test_index, "regime_id"].notna().all()
