@@ -1,6 +1,7 @@
 import joblib
 import numpy as np
 import pandas as pd
+import pytest
 
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.training.inference import predict_frame
@@ -130,8 +131,6 @@ def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
         },
         artifact,
     )
-
-    import pytest
 
     with pytest.raises(ValueError, match="do not match"):
         predict_frame(candles, artifact, timeframe="M1")
