@@ -6,7 +6,6 @@ import numpy as np
 from sklearn.isotonic import IsotonicRegression
 
 
-
 def _validate_probability_matrix(probabilities: np.ndarray) -> None:
     if not np.isfinite(probabilities).all():
         raise ValueError("Probabilities must be finite.")
