@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 
 from pullback_prediction.labels.barriers import make_barrier_labels
