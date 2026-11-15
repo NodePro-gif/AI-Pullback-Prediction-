@@ -14,14 +14,14 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | HistGradientBoosting benchmark | verified in CI | Same expanding folds and metrics; test coverage on Python 3.11/3.12 |
 | XGBoost benchmark path | implemented, unverified | Optional dependency and binary/multiclass mapping; run with `.[xgboost]` on real data |
 | Bid/ask cost-aware backtester | verified in unit tests | Next-open entries, adverse slippage, commission, stop-first collisions; finite OHLC, timezone, spread and cost validation |
-| CLI workflow | verified by smoke/unit tests | Download, validate, prepare, split, train, predict, walk-forward, benchmark, regime fit, backtest; full historical run pending |
+| CLI workflow | verified by smoke/unit tests | Download, validate, prepare, split, train baseline/stacked, predict, walk-forward, benchmark, regime fit, backtest; full historical run pending |
 | FastAPI inference service | verified by contract tests | Read-only /health and /predict; timestamp, OHLC, quote validation; no order execution |
 | Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
 | Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
 | Sequence window generation | verified by unit tests | Chronological trailing windows; invalid windows dropped |
 | LSTM / Transformer training | implemented, unverified | CUDA/MPS auto-selection, CUDA AMP, batched validation, class weighting, gradient clipping and early stopping; PyTorch runtime test is optional and skipped in base CI; fold integration and inference export pending |
-| Train-only market regime detector | implemented, CI verification pending | KMeans/standardization fit on 2015–2020 only; assignments for later periods; CLI artifact and parquet export |
-| Calibrated meta-learner | pending | Requires leakage-safe out-of-fold base-model probabilities and separate calibration |
+| Train-only market regime detector | implemented, CI verification pending | MiniBatchKMeans/standardization fit on 2015–2020 only; assignments for later periods; CLI artifact and parquet export |
+| Calibrated OOF stacked meta-learner | implemented, CI verification pending | Expanding-window OOF base probabilities with horizon gap; logistic meta-model; calibration 2021–2022; evaluation 2023 |
 | Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
 
 ## Hard constraints
