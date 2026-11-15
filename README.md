@@ -86,11 +86,11 @@ The command writes fold-level metrics and an aggregate `summary.json`.
 Compare HistGradientBoosting and optional XGBoost using the same chronological folds:
 
 ```bash
-pip install -e ".[ml]"
+pip install -e ".[xgboost]"
 pullback-predict benchmark-models --input data/processed/XAUUSD_M1.parquet --output-dir artifacts/benchmark_m1 --n-splits 5 --horizon-bars 12
 ```
 
-The benchmark writes per-model fold CSVs and aggregate metrics. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
+The benchmark writes per-model fold CSVs and aggregate metrics. Install `.[xgboost]` for XGBoost without installing PyTorch; install `.[deep-learning]` separately for PyTorch sequence models. XGBoost is skipped with a recorded reason if the optional dependency is not installed. Model comparisons use only 2015–2023 development data; the 2024+ final test is not opened.
 
 ## Research dashboard and API
 
