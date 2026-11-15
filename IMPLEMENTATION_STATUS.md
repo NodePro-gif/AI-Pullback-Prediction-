@@ -6,10 +6,11 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 |---|---|---|
 | Repository and project contract | verified | README and hard constraints committed |
 | Python package metadata and dependencies | implemented, unverified | CI dependency installation |
-| CLI for validation, splitting, training, prediction, and backtesting | implemented, unverified | CI plus CLI smoke test |
+| CLI for downloading, validation, splitting, training, prediction, and backtesting | implemented, unverified | CI plus download/CLI smoke tests pending |
 | Cost-aware bid/ask backtest engine | implemented, unverified | Long/short fills, costs, ambiguous bars, drawdown tests; latest CI pending |
 | Backtest CLI | implemented, unverified | CLI smoke test and real-data run pending |
-| Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI |
+| Dukascopy bid/ask CSV loader | verified | Unit tests pass in CI, including Unix-millisecond timestamps |
+| Dukascopy bid/ask downloader | implemented, unverified | Pinned CLI integration and no-overwrite/cache tests pending |
 | Separate Dukascopy bid/ask file ingestion | verified | Paired-file alignment tests pass in CI |
 | Fixed chronological partitions | verified | Boundary tests pass in CI |
 | Causal technical/microstructure features | verified | Future-perturbation leakage test passes in CI |
