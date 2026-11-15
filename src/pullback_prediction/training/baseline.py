@@ -1,4 +1,4 @@
-"""Leakage-aware gradient-boosting baseline training."""
+"""Leakage-aware gradient-boosting baseline training and calibration."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import joblib
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import HistGradientBoostingClassifier
 from sklearn.metrics import accuracy_score, balanced_accuracy_score, log_loss
@@ -14,6 +15,12 @@ from sklearn.metrics import accuracy_score, balanced_accuracy_score, log_loss
 from pullback_prediction.data.splits import chronological_split
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.labels.barriers import make_barrier_labels
+from pullback_prediction.training.calibration import (
+    apply_probability_calibrators,
+    fit_probability_calibrators,
+)
+
+CALIBRATION_EVALUATION_CUTOFF = pd.Timestamp("2023-01-01", tz="UTC")
 
 
 def _dataset(
@@ -43,7 +50,7 @@ def fit_baseline(
     max_leaf_nodes: int = 31,
     l2_regularization: float = 1.0,
 ) -> tuple[HistGradientBoostingClassifier, dict[str, Any]]:
-    """Fit on training data only and report untouched validation metrics."""
+    """Fit on training data only and report metrics on a separate holdout."""
     if list(train_x.columns) != list(validation_x.columns):
         raise ValueError("Training and validation feature columns must match.")
     if len(train_x) != len(train_y) or len(validation_x) != len(validation_y):
@@ -97,40 +104,111 @@ def train_baseline_from_frame(
     barrier_atr_multiple: float = 1.5,
     max_iter: int = 200,
 ) -> dict[str, Any]:
-    """Train on 2015–2020 and evaluate on 2021–2023; never load final test rows."""
+    """Train 2015–2020, calibrate 2021–2022, evaluate 2023; exclude final test."""
     partitions = chronological_split(candles)
     train_candles = partitions["train"]
     validation_candles = partitions["validation"]
     if train_candles.empty or validation_candles.empty:
         raise ValueError("Train and validation partitions must both be non-empty.")
 
+    calibration_candles = validation_candles.loc[
+        validation_candles.index < CALIBRATION_EVALUATION_CUTOFF
+    ]
+    evaluation_candles = validation_candles.loc[
+        validation_candles.index >= CALIBRATION_EVALUATION_CUTOFF
+    ]
+    if calibration_candles.empty or evaluation_candles.empty:
+        raise ValueError(
+            "Validation must contain both 2021–2022 calibration and 2023 evaluation rows."
+        )
+
     development = pd.concat([train_candles, validation_candles])
     development_features = build_features(development)
     train_features = development_features.loc[train_candles.index]
-    validation_features = development_features.loc[validation_candles.index]
+    calibration_features = development_features.loc[calibration_candles.index]
+    evaluation_features = development_features.loc[evaluation_candles.index]
 
     train_x, train_y = _dataset(
         train_candles, train_features, horizon_bars, barrier_atr_multiple
     )
-    validation_x, validation_y = _dataset(
-        validation_candles, validation_features, horizon_bars, barrier_atr_multiple
+    calibration_x, calibration_y = _dataset(
+        calibration_candles,
+        calibration_features,
+        horizon_bars,
+        barrier_atr_multiple,
     )
-    model, metrics = fit_baseline(
+    evaluation_x, evaluation_y = _dataset(
+        evaluation_candles,
+        evaluation_features,
+        horizon_bars,
+        barrier_atr_multiple,
+    )
+    if calibration_x.empty or evaluation_x.empty:
+        raise ValueError("Calibration and evaluation partitions need usable labeled rows.")
+
+    model, _ = fit_baseline(
         train_x,
         train_y,
-        validation_x,
-        validation_y,
+        calibration_x,
+        calibration_y,
         max_iter=max_iter,
     )
+    classes = np.asarray(model.classes_, dtype=int)
+    calibration_raw = model.predict_proba(calibration_x)
+    calibrators = fit_probability_calibrators(
+        calibration_raw,
+        calibration_y.to_numpy(),
+        classes,
+    )
+    evaluation_raw = model.predict_proba(evaluation_x)
+    evaluation_probabilities = apply_probability_calibrators(
+        evaluation_raw,
+        calibrators,
+    )
+    predictions = classes[evaluation_probabilities.argmax(axis=1)]
+    evaluation_classes = set(evaluation_y.unique().tolist())
+    known_classes = set(classes.tolist())
+
+    one_hot = np.column_stack(
+        [(evaluation_y.to_numpy() == class_value) for class_value in classes]
+    ).astype(float)
+    metrics: dict[str, Any] = {
+        "calibration_rows": int(len(calibration_y)),
+        "evaluation_rows": int(len(evaluation_y)),
+        "accuracy": float(accuracy_score(evaluation_y, predictions)),
+        "balanced_accuracy": float(
+            balanced_accuracy_score(evaluation_y, predictions)
+        ),
+        "multiclass_brier_score": float(
+            np.mean(np.sum((one_hot - evaluation_probabilities) ** 2, axis=1))
+        ),
+        "log_loss": None,
+        "classes": [int(value) for value in classes],
+        "evaluation_classes": [
+            int(value) for value in sorted(evaluation_classes)
+        ],
+    }
+    if evaluation_classes.issubset(known_classes):
+        metrics["log_loss"] = float(
+            log_loss(evaluation_y, evaluation_probabilities, labels=classes)
+        )
+    else:
+        metrics["log_loss_note"] = (
+            "Omitted because evaluation contains a class absent from training."
+        )
 
     destination = Path(output_path)
     destination.parent.mkdir(parents=True, exist_ok=True)
     artifact = {
         "model": model,
         "feature_columns": list(train_x.columns),
+        "calibrators": calibrators,
+        "calibration_classes": [int(value) for value in classes],
         "target_mapping": {-1: "SELL", 0: "WAIT", 1: "BUY"},
         "training_period": "2015-01-01 through 2020-12-31",
-        "validation_period": "2021-01-01 through 2023-12-31",
+        "calibration_period": "2021-01-01 through 2022-12-31",
+        "evaluation_period": "2023-01-01 through 2023-12-31",
+        "final_test_period": "2024-01-01 onward; not accessed",
         "horizon_bars": horizon_bars,
         "barrier_atr_multiple": barrier_atr_multiple,
         "metrics": metrics,
@@ -138,7 +216,7 @@ def train_baseline_from_frame(
     joblib.dump(artifact, destination)
     metrics_path = destination.with_suffix(".metrics.json")
     metrics_path.write_text(
-        json.dumps(metrics, indent=2, sort_keys=True) + "\n",
+        json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\n",
         encoding="utf-8",
     )
     return {
