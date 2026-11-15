@@ -38,3 +38,25 @@ def test_future_price_change_does_not_change_past_features():
     before = build_features(original)
     after = build_features(changed)
     pd.testing.assert_frame_equal(before.iloc[:-1], after.iloc[:-1])
+
+
+def test_features_include_causal_trend_volatility_spread_and_time_context():
+    frame = _candles(320)
+    result = build_features(frame)
+
+    expected = {
+        "trend_strength_20_50",
+        "trend_strength_50_200",
+        "atr_change_5",
+        "volatility_ratio_5_60",
+        "spread_zscore_30",
+        "spread_to_atr",
+        "hour_sin",
+        "hour_cos",
+        "day_of_week_sin",
+        "day_of_week_cos",
+    }
+    assert expected.issubset(result.columns)
+    assert result.loc[result.index[220:], list(expected)].notna().all().all()
+    assert result["hour_sin"].between(-1, 1).all()
+    assert result["day_of_week_cos"].between(-1, 1).all()
