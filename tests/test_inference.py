@@ -116,3 +116,41 @@ def test_predict_frame_rejects_mismatched_model_timeframe(tmp_path):
 
     with pytest.raises(ValueError, match="does not match model artifact"):
         predict_frame(candles, artifact, timeframe="M5")
+
+def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
+    candles = sample_candles()
+    candles.index = pd.date_range("2024-01-01", periods=220, freq="5min", tz="UTC")
+    columns = list(build_features(candles).columns)
+    artifact = tmp_path / "m1_model.joblib"
+    joblib.dump(
+        {
+            "model": FixedProbabilityModel(),
+            "feature_columns": columns,
+            "timeframe": "M1",
+        },
+        artifact,
+    )
+
+    import pytest
+
+    with pytest.raises(ValueError, match="do not match"):
+        predict_frame(candles, artifact, timeframe="M1")
+
+
+def test_predict_frame_rejects_requested_timeframe_not_matching_artifact(tmp_path):
+    candles = sample_candles()
+    columns = list(build_features(candles).columns)
+    artifact = tmp_path / "m1_model.joblib"
+    joblib.dump(
+        {
+            "model": FixedProbabilityModel(),
+            "feature_columns": columns,
+            "timeframe": "M1",
+        },
+        artifact,
+    )
+
+    import pytest
+
+    with pytest.raises(ValueError, match="does not match model artifact"):
+        predict_frame(candles, artifact, timeframe="M5")
