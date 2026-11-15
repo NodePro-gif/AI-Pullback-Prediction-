@@ -17,7 +17,7 @@ Statuses: **verified** means passing recorded checks; **implemented, unverified*
 | FastAPI inference service | implemented, verification pending | Read-only /health and /predict endpoints; no order execution |
 | Streamlit research dashboard | implemented, verification pending | Local parquet upload and model inference UI |
 | Docker image | implemented, verification pending | API container; artifact must be mounted at runtime |
-| LSTM / Transformer sequence training | pending | Needs explicit sequence-window training, GPU memory controls and walk-forward validation |
+| LSTM / Transformer sequence models | implemented, verification pending | Trailing windows, CUDA/MPS auto-selection, class weighting, gradient clipping and early stopping; fold integration and inference export pending |
 | Regime detector and meta-learner | pending | Requires out-of-fold predictions and separate calibration |
 | Real-data benchmark and untouched final test | pending | Requires complete Dukascopy M1/M5 data and compute run |
 
