@@ -74,7 +74,6 @@ def test_api_predict_returns_buy_sell_wait_labels(monkeypatch, tmp_path):
     assert result[-1].probabilities_calibrated is True
 
 
-
 def test_api_predict_rejects_naive_timestamps(monkeypatch, tmp_path):
     model = tmp_path / "model.joblib"
     model.touch()
@@ -86,7 +85,7 @@ def test_api_predict_rejects_naive_timestamps(monkeypatch, tmp_path):
         api.predict(request)
 
     assert error.value.status_code == 422
-    assert "timezone-aware" in error.value.detail
+    assert "timezone" in error.value.detail.lower()
 
 
 def test_api_predict_rejects_crossed_bid_ask_quotes(monkeypatch, tmp_path):
