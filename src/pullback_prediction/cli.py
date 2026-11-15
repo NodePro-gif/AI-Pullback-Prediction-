@@ -219,6 +219,7 @@ def train_baseline(
     horizon_bars: int = typer.Option(12, "--horizon-bars", min=1),
     barrier_atr_multiple: float = typer.Option(1.5, "--barrier-atr-multiple", min=0.01),
     max_iter: int = typer.Option(200, "--max-iter", min=1),
+    timeframe: str = typer.Option("M1", "--timeframe"),
 ) -> None:
     """Train a gradient-boosting baseline; final-test data is excluded."""
     frame = pd.read_parquet(input)
@@ -228,6 +229,7 @@ def train_baseline(
         horizon_bars=horizon_bars,
         barrier_atr_multiple=barrier_atr_multiple,
         max_iter=max_iter,
+        timeframe=timeframe,
     )
     for key, value in result.items():
         typer.echo(f"{key}={value}")
@@ -239,10 +241,13 @@ def predict_command(
     model: Path = typer.Option(..., "--model", exists=True, readable=True),
     output: Path = typer.Option(Path("data/processed/predictions.parquet"), "--output"),
     min_probability: float = typer.Option(0.60, "--min-probability", min=0.0, max=1.0),
+    timeframe: str = typer.Option("M1", "--timeframe"),
 ) -> None:
     """Generate BUY/SELL/WAIT signals and class scores from a saved model."""
     frame = pd.read_parquet(input)
-    predictions = predict_frame(frame, model, min_probability=min_probability)
+    predictions = predict_frame(
+        frame, model, min_probability=min_probability, timeframe=timeframe
+    )
     overlapping = [column for column in predictions.columns if column in frame.columns]
     output_frame = frame.drop(columns=overlapping).join(predictions)
     output.parent.mkdir(parents=True, exist_ok=True)
