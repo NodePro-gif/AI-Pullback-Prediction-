@@ -57,6 +57,7 @@ def test_api_predict_returns_buy_sell_wait_labels(monkeypatch, tmp_path):
             {
                 "signal": np.zeros(len(frame), dtype="int8"),
                 "confidence": np.full(len(frame), 0.5),
+                "probabilities_calibrated": np.ones(len(frame), dtype=bool),
                 "prob_sell": np.full(len(frame), 0.2),
                 "prob_wait": np.full(len(frame), 0.5),
                 "prob_buy": np.full(len(frame), 0.3),
@@ -70,6 +71,7 @@ def test_api_predict_returns_buy_sell_wait_labels(monkeypatch, tmp_path):
     assert len(result) == 220
     assert result[-1].signal == "WAIT"
     assert result[-1].prob_wait == 0.5
+    assert result[-1].probabilities_calibrated is True
 
 
 
