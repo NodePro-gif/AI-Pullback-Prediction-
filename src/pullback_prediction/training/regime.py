@@ -39,7 +39,7 @@ class RegimeDetector:
     ) -> "RegimeDetector":
         """Fit clusters using finite rows from the supplied training features."""
         if n_regimes < 2 or batch_size < 1:
-            raise ValueError("n_regimes must be >= 2 and batch_size must be positive.")
+            raise ValueError("n_regimes must be at least 2 and batch_size must be positive.")
         if not features.index.is_monotonic_increasing or not features.index.is_unique:
             raise ValueError("Feature index must be unique and chronological.")
         missing = set(feature_columns).difference(features.columns)
