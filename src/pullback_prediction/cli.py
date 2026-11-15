@@ -77,16 +77,21 @@ def backtest_signals_command(
     signal_column: str = typer.Option("signal", "--signal-column"),
     atr_column: str = typer.Option("atr_14", "--atr-column"),
     stop_atr_multiple: float = typer.Option(1.5, "--stop-atr-multiple", min=0.01),
-    take_profit_atr_multiple: float = typer.Option(2.0, "--take-profit-atr-multiple", min=0.01),
+    take_profit_atr_multiple: float = typer.Option(
+        2.0, "--take-profit-atr-multiple", min=0.01
+    ),
     max_holding_bars: int = typer.Option(12, "--max-holding-bars", min=1),
     slippage_price: float = typer.Option(0.0, "--slippage-price", min=0.0),
-    commission_price_units: float = typer.Option(0.0, "--commission-price-units", min=0.0),
+    commission_price_units: float = typer.Option(
+        0.0, "--commission-price-units", min=0.0
+    ),
 ) -> None:
     """Backtest -1/0/+1 signals with bid/ask fills and explicit costs."""
     frame = pd.read_parquet(input)
     missing = {signal_column, atr_column}.difference(frame.columns)
     if missing:
-        raise typer.BadParameter(f"Missing signal/ATR columns: {', '.join(sorted(missing))}")
+        missing_names = ", ".join(sorted(missing))
+        raise typer.BadParameter(f"Missing signal/ATR columns: {missing_names}")
     signals = frame[signal_column].astype("int8")
     atr = frame[atr_column].astype(float)
     candles = frame.drop(columns=[signal_column, atr_column])
@@ -112,6 +117,7 @@ def backtest_signals_command(
     typer.echo(f"summary_path={summary_path}")
     for key, value in result["summary"].items():
         typer.echo(f"{key}={value}")
+
 
 if __name__ == "__main__":
     app()
