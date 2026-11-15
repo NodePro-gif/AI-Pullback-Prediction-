@@ -149,6 +149,7 @@ def walk_forward_command(
     for key, value in result["summary"].items():
         typer.echo(f"{key}={value}")
 
+
 @app.command("benchmark-models")
 def benchmark_models_command(
     input: Path = typer.Option(..., "--input", exists=True, readable=True),
