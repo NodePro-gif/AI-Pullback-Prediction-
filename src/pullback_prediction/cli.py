@@ -42,6 +42,24 @@ def download_data_command(
     typer.echo(f"bid_file={bid_path}")
     typer.echo(f"ask_file={ask_path}")
 
+@app.command("prepare-data")
+def prepare_data_command(
+    bid_input: Path = typer.Option(..., "--bid-input", exists=True, readable=True),
+    ask_input: Path = typer.Option(..., "--ask-input", exists=True, readable=True),
+    timeframe: str = typer.Option(..., "--timeframe"),
+    output: Path = typer.Option(..., "--output"),
+) -> None:
+    """Validate and combine separate bid/ask CSV files into Parquet."""
+    if output.exists():
+        raise typer.BadParameter(f"Refusing to overwrite processed data: {output}")
+    frame = load_dukascopy_bid_ask_pair(bid_input, ask_input, timeframe=timeframe)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    frame.to_parquet(output)
+    typer.echo(f"rows={len(frame)}")
+    typer.echo(f"start={frame.index.min().isoformat()}")
+    typer.echo(f"end={frame.index.max().isoformat()}")
+    typer.echo(f"output={output}")
+
 @app.command("validate-data")
 def validate_data(
     input: Path = typer.Option(..., "--input", exists=True, readable=True),
