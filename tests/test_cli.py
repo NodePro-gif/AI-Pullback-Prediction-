@@ -197,3 +197,10 @@ def test_fit_regimes_cli_fits_only_training_partition(tmp_path, monkeypatch):
     assignments = pd.read_parquet(output_dir / "regime_assignments.parquet")
     assert assignments.index.equals(index)
     assert assignments.loc[test_index, "regime_id"].notna().all()
+
+
+def test_train_stacked_cli_command_is_registered():
+    result = CliRunner().invoke(app, ["train-stacked", "--help"])
+    assert result.exit_code == 0
+    assert "--n-splits" in result.output
+    assert "--gap-bars" in result.output
