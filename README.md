@@ -53,7 +53,13 @@ pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --outpu
 
 The command writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is excluded. Run separately for M5 data.
 
-Backtest a parquet file containing a `signal` column (-1 short, 0 wait, +1 long) and `atr_14` alongside bid/ask OHLC:
+Generate out-of-sample or validation predictions from a saved model. The model emits a signal only when its highest raw class score meets the abstention threshold; these scores are not calibrated probabilities:
+
+```bash
+pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_baseline.joblib --output data/processed/XAUUSD_M1_signals.parquet --min-probability 0.60
+```
+
+Then backtest the resulting parquet, which contains `signal` (-1 short, 0 wait, +1 long) and `atr_14` alongside bid/ask OHLC:
 
 ```bash
 pullback-predict backtest-signals --input data/processed/XAUUSD_M1_signals.parquet --output-dir artifacts/backtest_m1 --slippage-price 0.05
