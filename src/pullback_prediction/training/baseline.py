@@ -103,8 +103,11 @@ def train_baseline_from_frame(
     horizon_bars: int = 12,
     barrier_atr_multiple: float = 1.5,
     max_iter: int = 200,
+    timeframe: str | None = None,
 ) -> dict[str, Any]:
     """Train 2015–2020, calibrate 2021–2022, evaluate 2023; exclude final test."""
+    if timeframe not in {None, "M1", "M5"}:
+        raise ValueError("timeframe must be M1 or M5.")
     partitions = chronological_split(candles)
     train_candles = partitions["train"]
     validation_candles = partitions["validation"]
@@ -202,6 +205,7 @@ def train_baseline_from_frame(
     artifact = {
         "model": model,
         "feature_columns": list(train_x.columns),
+        "timeframe": timeframe,
         "calibrators": calibrators,
         "calibration_classes": [int(value) for value in classes],
         "target_mapping": {-1: "SELL", 0: "WAIT", 1: "BUY"},
