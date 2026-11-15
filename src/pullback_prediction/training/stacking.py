@@ -123,3 +123,140 @@ class StackedPullbackClassifier:
             destination = int(np.searchsorted(self.classes_, class_value))
             output[:, destination] = meta_probabilities[:, column]
         return output
+
+
+def train_stacked_from_frame(
+    candles: pd.DataFrame,
+    output_path: str,
+    *,
+    timeframe: str = "M1",
+    horizon_bars: int = 12,
+    barrier_atr_multiple: float = 1.5,
+    n_splits: int = 5,
+    gap_bars: int | None = None,
+    max_iter: int = 200,
+) -> dict[str, Any]:
+    """Train OOF stack, calibrate on 2021–2022, evaluate on 2023, exclude 2024+."""
+    import json
+    from pathlib import Path
+
+    import joblib
+    from sklearn.metrics import accuracy_score, balanced_accuracy_score, log_loss
+
+    from pullback_prediction.data.splits import chronological_split
+    from pullback_prediction.features.technical import build_features
+    from pullback_prediction.labels.barriers import make_barrier_labels
+    from pullback_prediction.training.calibration import (
+        apply_probability_calibrators,
+        fit_probability_calibrators,
+    )
+
+    if timeframe not in {"M1", "M5"}:
+        raise ValueError("timeframe must be M1 or M5.")
+    effective_gap = horizon_bars if gap_bars is None else gap_bars
+    if effective_gap < horizon_bars:
+        raise ValueError("gap_bars must be at least horizon_bars.")
+    partitions = chronological_split(candles)
+    training = partitions["train"]
+    validation = partitions["validation"]
+    calibration_cutoff = pd.Timestamp("2023-01-01", tz="UTC")
+    calibration = validation.loc[validation.index < calibration_cutoff]
+    evaluation = validation.loc[validation.index >= calibration_cutoff]
+    if training.empty or calibration.empty or evaluation.empty:
+        raise ValueError("Train, 2021–2022 calibration and 2023 evaluation are required.")
+
+    development = pd.concat([training, validation])
+    features = build_features(development)
+    labels = make_barrier_labels(
+        development,
+        features["atr_14"],
+        horizon_bars=horizon_bars,
+        barrier_atr_multiple=barrier_atr_multiple,
+    )
+    feature_valid = features.notna().all(axis=1)
+    label_valid = labels.notna()
+    train_mask = training.index.isin(development.index)
+    train_x = features.loc[training.index]
+    train_y = labels.loc[training.index]
+    train_valid = train_x.notna().all(axis=1) & train_y.notna()
+    calibration_x = features.loc[calibration.index]
+    calibration_y = labels.loc[calibration.index]
+    calibration_valid = calibration_x.notna().all(axis=1) & calibration_y.notna()
+    evaluation_x = features.loc[evaluation.index]
+    evaluation_y = labels.loc[evaluation.index]
+    evaluation_valid = evaluation_x.notna().all(axis=1) & evaluation_y.notna()
+    train_x, train_y = train_x.loc[train_valid], train_y.loc[train_valid].astype(int)
+    calibration_x = calibration_x.loc[calibration_valid]
+    calibration_y = calibration_y.loc[calibration_valid].astype(int)
+    evaluation_x = evaluation_x.loc[evaluation_valid]
+    evaluation_y = evaluation_y.loc[evaluation_valid].astype(int)
+    if calibration_x.empty or evaluation_x.empty:
+        raise ValueError("Calibration and evaluation require valid labeled rows.")
+
+    model = StackedPullbackClassifier.fit(
+        train_x,
+        train_y,
+        n_splits=n_splits,
+        gap_bars=effective_gap,
+        max_iter=max_iter,
+    )
+    classes = model.classes_
+    calibration_raw = model.predict_proba(calibration_x)
+    calibrators = fit_probability_calibrators(
+        calibration_raw,
+        calibration_y.to_numpy(),
+        classes,
+    )
+    evaluation_raw = model.predict_proba(evaluation_x)
+    evaluation_probabilities = apply_probability_calibrators(
+        evaluation_raw,
+        calibrators,
+    )
+    predictions = classes[evaluation_probabilities.argmax(axis=1)]
+    one_hot = np.column_stack(
+        [evaluation_y.to_numpy() == value for value in classes]
+    ).astype(float)
+    evaluation_classes = set(evaluation_y.unique().tolist())
+    known_classes = set(classes.tolist())
+    metrics: dict[str, Any] = {
+        "train_rows": int(len(train_y)),
+        "calibration_rows": int(len(calibration_y)),
+        "evaluation_rows": int(len(evaluation_y)),
+        "accuracy": float(accuracy_score(evaluation_y, predictions)),
+        "balanced_accuracy": float(
+            balanced_accuracy_score(evaluation_y, predictions)
+        ),
+        "multiclass_brier_score": float(
+            np.mean(np.sum((one_hot - evaluation_probabilities) ** 2, axis=1))
+        ),
+        "log_loss": (
+            float(log_loss(evaluation_y, evaluation_probabilities, labels=classes))
+            if evaluation_classes.issubset(known_classes)
+            else None
+        ),
+        "classes": [int(value) for value in classes],
+    }
+    destination = Path(output_path)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    artifact = {
+        "model": model,
+        "feature_columns": list(train_x.columns),
+        "timeframe": timeframe,
+        "calibrators": calibrators,
+        "calibration_classes": [int(value) for value in classes],
+        "target_mapping": {-1: "SELL", 0: "WAIT", 1: "BUY"},
+        "training_period": "2015-01-01 through 2020-12-31",
+        "calibration_period": "2021-01-01 through 2022-12-31",
+        "evaluation_period": "2023-01-01 through 2023-12-31",
+        "final_test_period": "2024-01-01 onward; not accessed",
+        "horizon_bars": horizon_bars,
+        "barrier_atr_multiple": barrier_atr_multiple,
+        "metrics": metrics,
+    }
+    joblib.dump(artifact, destination)
+    metrics_path = destination.with_suffix(".metrics.json")
+    metrics_path.write_text(
+        json.dumps(metrics, indent=2, sort_keys=True, allow_nan=False) + "\\n",
+        encoding="utf-8",
+    )
+    return {**metrics, "model_path": str(destination), "metrics_path": str(metrics_path)}
