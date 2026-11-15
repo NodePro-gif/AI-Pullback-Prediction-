@@ -33,7 +33,7 @@ def _summary(trades: pd.DataFrame) -> dict[str, Any]:
         "total_trades": int(len(trades)),
         "win_rate": float((pnl > 0).mean()),
         "net_pnl": float(pnl.sum()),
-        "profit_factor": float(profit_factor),
+        "profit_factor": profit_factor,
         "expectancy": float(pnl.mean()),
         "max_drawdown": float(drawdown.min()),
     }
