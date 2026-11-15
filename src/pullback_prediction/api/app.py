@@ -77,9 +77,11 @@ def predict(request: PredictionRequest) -> list[Prediction]:
     if not np.isfinite(frame[price_columns].to_numpy(dtype=float)).all():
         raise HTTPException(status_code=422, detail="Candle prices must be finite.")
     for side in ("bid", "ask"):
+        expected_high = frame[[f"{side}_open", f"{side}_close", f"{side}_low"]].max(axis=1)
+        expected_low = frame[[f"{side}_open", f"{side}_close", f"{side}_high"]].min(axis=1)
         if (
-            (frame[f"{side}_high"] < frame[[f"{side}_open", f"{side}_close", f"{side}_low"]].max(axis=1)).any()
-            or (frame[f"{side}_low"] > frame[[f"{side}_open", f"{side}_close", f"{side}_high"]].min(axis=1)).any()
+            (frame[f"{side}_high"] < expected_high).any()
+            or (frame[f"{side}_low"] > expected_low).any()
         ):
             raise HTTPException(status_code=422, detail=f"Invalid {side} OHLC candle.")
     for field in ("open", "high", "low", "close"):
