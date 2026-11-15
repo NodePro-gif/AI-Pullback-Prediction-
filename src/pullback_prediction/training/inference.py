@@ -29,6 +29,18 @@ def predict_frame(
     if not 0.0 <= min_probability <= 1.0:
         raise ValueError("min_probability must be between 0 and 1.")
 
+    if timeframe is not None:
+        if timeframe not in {"M1", "M5"}:
+            raise ValueError("timeframe must be M1 or M5.")
+        if not isinstance(candles.index, pd.DatetimeIndex) or candles.index.tz is None:
+            raise ValueError("Candle index must contain timezone-aware timestamps.")
+        expected_interval = pd.Timedelta(
+            60 if timeframe == "M1" else 300, unit="s"
+        )
+        median_interval = candles.index.to_series().diff().dropna().median()
+        if median_interval != expected_interval:
+            raise ValueError("Candle spacing does not match the requested timeframe.")
+
     artifact: dict[str, Any] = joblib.load(artifact_path)
     model = artifact.get("model")
     feature_columns = artifact.get("feature_columns")
