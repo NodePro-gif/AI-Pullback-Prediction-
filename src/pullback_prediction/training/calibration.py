@@ -45,7 +45,9 @@ def apply_probability_calibrators(
     """Apply one-vs-rest maps and renormalize rows to a probability simplex."""
     probabilities = np.asarray(probabilities, dtype=float)
     if probabilities.ndim != 2 or probabilities.shape[1] != len(calibrators):
-        raise ValueError("Probability columns and calibrators must have the same number of columns.")
+        raise ValueError(
+            "Probability columns and calibrators must have the same number of columns."
+        )
     if not np.isfinite(probabilities).all():
         raise ValueError("Probabilities must be finite.")
 
