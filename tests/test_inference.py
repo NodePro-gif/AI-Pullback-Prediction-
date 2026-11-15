@@ -134,3 +134,48 @@ def test_predict_frame_rejects_candles_with_wrong_interval(tmp_path):
     with pytest.raises(ValueError, match="does not match"):
         predict_frame(candles, artifact, timeframe="M1")
 
+
+
+
+def test_predict_frame_loads_sequence_checkpoint_and_aligns_window_rows(tmp_path):
+    torch = pytest.importorskip("torch")
+    from sklearn.preprocessing import StandardScaler
+
+    from pullback_prediction.training.sequence import build_sequence_model
+
+    candles = sample_candles()
+    features = build_features(candles)
+    columns = list(features.columns)
+    scaler = StandardScaler().fit(features.dropna())
+    config = {
+        "architecture": "lstm",
+        "n_features": len(columns),
+        "n_classes": 3,
+        "hidden_dim": 8,
+        "num_layers": 1,
+        "dropout": 0.0,
+        "max_sequence_length": 16,
+    }
+    model = build_sequence_model(**config)
+    weights_path = tmp_path / "sequence.pt"
+    torch.save({"state_dict": model.state_dict()}, weights_path)
+    artifact_path = tmp_path / "sequence.joblib"
+    joblib.dump(
+        {
+            "artifact_type": "sequence_classifier",
+            "weights_path": weights_path.name,
+            "model_config": config,
+            "scaler": scaler,
+            "feature_columns": columns,
+            "sequence_length": 16,
+            "classes": [-1, 0, 1],
+            "calibrators": None,
+        },
+        artifact_path,
+    )
+
+    result = predict_frame(candles, artifact_path, min_probability=0.0)
+
+    assert result.iloc[:15]["confidence"].eq(0.0).all()
+    assert result.iloc[15:]["confidence"].gt(0.0).all()
+    assert result.iloc[15:][["prob_sell", "prob_wait", "prob_buy"]].notna().all().all()
