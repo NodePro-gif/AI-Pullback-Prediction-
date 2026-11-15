@@ -80,9 +80,10 @@ def backtest_signals(
     if not np.isfinite(prices).all() or (prices <= 0).any():
         raise ValueError("Bid/ask OHLC prices must be finite and positive.")
     for side in ("bid", "ask"):
-        side_frame = candles[
-            [f"{side}_{field}" for field in ("open", "high", "low", "close")]
-        ].rename(columns=lambda column: column.removeprefix(f"{side}_"))
+        side_columns = {
+            f"{side}_{field}": field for field in ("open", "high", "low", "close")
+        }
+        side_frame = candles[list(side_columns)].rename(columns=side_columns)
         expected_high = side_frame[["open", "close", "low"]].max(axis=1)
         expected_low = side_frame[["open", "close", "high"]].min(axis=1)
         if (
