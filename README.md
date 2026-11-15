@@ -73,9 +73,17 @@ Train the baseline on 2015–2020 and evaluate on 2021–2023:
 pullback-predict train-baseline --input data/processed/XAUUSD_M1.parquet --output artifacts/xauusd_m1_baseline.joblib
 ```
 
-The command writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is excluded. Run separately for M5 data.
+The command fits on 2015–2020, fits one-vs-rest isotonic calibrators on 2021–2022, and reports holdout metrics on 2023. It writes a model artifact and sibling `.metrics.json`. The 2024+ final-test partition is not accessed. Run separately for M5 data.
 
-Generate out-of-sample or validation predictions from a saved model. The model emits a signal only when its highest raw class score meets the abstention threshold; these scores are not calibrated probabilities:
+Run expanding-window walk-forward evaluation on development data (2015–2023). The horizon-sized gap is enforced before invalid rows are removed, and 2024+ is excluded:
+
+```bash
+pullback-predict walk-forward --input data/processed/XAUUSD_M1.parquet --output-dir artifacts/walk_forward_m1 --n-splits 5 --horizon-bars 12
+```
+
+The command writes fold-level metrics and an aggregate `summary.json`.
+
+Generate out-of-sample or validation predictions from a saved model. New artifacts apply the 2021–2022 isotonic calibrators before the abstention threshold; older artifacts without calibrators use raw model scores:
 
 ```bash
 pullback-predict predict --input data/processed/XAUUSD_M1.parquet --model artifacts/xauusd_baseline.joblib --output data/processed/XAUUSD_M1_signals.parquet --min-probability 0.60
