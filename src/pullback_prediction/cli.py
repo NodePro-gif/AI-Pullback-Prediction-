@@ -15,8 +15,8 @@ from pullback_prediction.data.loader import (
 from pullback_prediction.data.splits import chronological_split
 from pullback_prediction.features.technical import build_features
 from pullback_prediction.labels.barriers import make_barrier_labels
-from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.baseline import train_baseline_from_frame
+from pullback_prediction.training.benchmark import benchmark_tabular_models
 from pullback_prediction.training.inference import predict_frame
 from pullback_prediction.training.walk_forward import walk_forward_evaluate
 
