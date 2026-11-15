@@ -128,7 +128,7 @@ def test_stacked_training_labels_each_period_without_crossing_boundaries(
         max_iter=5,
     )
 
-    assert observed == [
+    expected = [
         partitions["train"].index,
         partitions["validation"].loc[
             partitions["validation"].index < pd.Timestamp("2023-01-01", tz="UTC")
@@ -137,6 +137,8 @@ def test_stacked_training_labels_each_period_without_crossing_boundaries(
             partitions["validation"].index >= pd.Timestamp("2023-01-01", tz="UTC")
         ].index,
     ]
+    assert len(observed) == len(expected)
+    assert all(actual.equals(wanted) for actual, wanted in zip(observed, expected, strict=True))
     artifact = saved["artifact"]
     assert artifact["final_test_period"].startswith("2024-01-01")
     assert result["evaluation_rows"] == len(evaluation_index)
