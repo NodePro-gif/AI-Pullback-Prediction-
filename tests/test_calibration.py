@@ -41,3 +41,29 @@ def test_calibration_falls_back_to_identity_for_unseen_class():
 def test_calibration_rejects_probability_class_shape_mismatch():
     with pytest.raises(ValueError, match="same number of columns"):
         apply_probability_calibrators(np.ones((2, 2)), [None, None, None])
+
+
+@pytest.mark.parametrize(
+    "probabilities",
+    [
+        np.array([[0.2, 0.2, 0.2]]),
+        np.array([[1.1, -0.1, 0.0]]),
+        np.array([[np.nan, 0.5, 0.5]]),
+    ],
+)
+def test_calibration_rejects_invalid_probability_simplex(probabilities):
+    with pytest.raises(ValueError):
+        fit_probability_calibrators(
+            probabilities,
+            np.array([-1]),
+            np.array([-1, 0, 1]),
+        )
+
+
+def test_calibration_rejects_labels_outside_supplied_classes():
+    with pytest.raises(ValueError, match="supplied classes"):
+        fit_probability_calibrators(
+            np.array([[0.2, 0.3, 0.5]]),
+            np.array([2]),
+            np.array([-1, 0, 1]),
+        )
