@@ -27,3 +27,20 @@ jobs:
         run: python -m pytest
       - name: Run Ruff
         run: ruff check .
+
+  deep-learning:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - name: Install CPU PyTorch
+        run: python -m pip install --index-url https://download.pytorch.org/whl/cpu "torch>=2.2"
+      - name: Install package and test dependencies
+        run: python -m pip install -e ".[dev]"
+      - name: Run PyTorch sequence and inference tests
+        run: python -m pytest tests/test_sequence.py tests/test_inference.py -q
+      - name: Run Ruff
+        run: ruff check .
