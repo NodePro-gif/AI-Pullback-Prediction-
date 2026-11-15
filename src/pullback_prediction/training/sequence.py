@@ -140,8 +140,10 @@ def train_sequence_model(
     patience: int = 5,
     seed: int = 42,
     device: str | None = None,
+    mixed_precision: bool = True,
+    num_workers: int = 0,
 ) -> dict[str, Any]:
-    """Train with class-weighted loss, gradient clipping and early stopping."""
+    """Train with batched validation, optional CUDA AMP and early stopping."""
     try:
         import torch
         from torch import nn
@@ -159,7 +161,13 @@ def train_sequence_model(
         raise ValueError("Sequence and label row counts must match.")
     if not len(train_x) or not len(validation_x):
         raise ValueError("Training and validation sequences must be non-empty.")
-    if epochs < 1 or batch_size < 1 or patience < 1 or learning_rate <= 0:
+    if (
+        epochs < 1
+        or batch_size < 1
+        or patience < 1
+        or learning_rate <= 0
+        or num_workers < 0
+    ):
         raise ValueError("Invalid training hyperparameters.")
 
     random.seed(seed)
@@ -191,9 +199,9 @@ def train_sequence_model(
         torch.as_tensor(train_x, dtype=torch.float32),
         torch.as_tensor(mapped_train, dtype=torch.long),
     )
-    validation_values = torch.as_tensor(validation_x, dtype=torch.float32, device=target_device)
-    validation_targets = torch.as_tensor(
-        mapped_validation, dtype=torch.long, device=target_device
+    validation_dataset = TensorDataset(
+        torch.as_tensor(validation_x, dtype=torch.float32),
+        torch.as_tensor(mapped_validation, dtype=torch.long),
     )
     generator = torch.Generator().manual_seed(seed)
     loader = DataLoader(
@@ -202,11 +210,21 @@ def train_sequence_model(
         shuffle=True,
         generator=generator,
         pin_memory=target_device.type == "cuda",
+        num_workers=num_workers,
+    )
+    validation_loader = DataLoader(
+        validation_dataset,
+        batch_size=batch_size,
+        shuffle=False,
+        pin_memory=target_device.type == "cuda",
+        num_workers=num_workers,
     )
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=learning_rate, weight_decay=weight_decay
     )
     criterion = nn.CrossEntropyLoss(weight=class_weights)
+    amp_enabled = mixed_precision and target_device.type == "cuda"
+    scaler = torch.amp.GradScaler("cuda", enabled=amp_enabled)
     best_loss = float("inf")
     best_state = None
     stale_epochs = 0
@@ -220,17 +238,36 @@ def train_sequence_model(
             batch_x = batch_x.to(target_device, non_blocking=True)
             batch_y = batch_y.to(target_device, non_blocking=True)
             optimizer.zero_grad(set_to_none=True)
-            loss = criterion(model(batch_x), batch_y)
-            loss.backward()
+            with torch.autocast(
+                device_type=target_device.type,
+                dtype=torch.float16,
+                enabled=amp_enabled,
+            ):
+                loss = criterion(model(batch_x), batch_y)
+            scaler.scale(loss).backward()
+            scaler.unscale_(optimizer)
             nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
-            optimizer.step()
+            scaler.step(optimizer)
+            scaler.update()
             total_loss += float(loss.detach()) * len(batch_y)
             total_rows += len(batch_y)
 
         model.eval()
-        with torch.no_grad():
-            validation_logits = model(validation_values)
-            validation_loss = float(criterion(validation_logits, validation_targets))
+        validation_total = 0.0
+        validation_rows = 0
+        with torch.inference_mode():
+            for batch_x, batch_y in validation_loader:
+                batch_x = batch_x.to(target_device, non_blocking=True)
+                batch_y = batch_y.to(target_device, non_blocking=True)
+                with torch.autocast(
+                    device_type=target_device.type,
+                    dtype=torch.float16,
+                    enabled=amp_enabled,
+                ):
+                    validation_batch_loss = criterion(model(batch_x), batch_y)
+                validation_total += float(validation_batch_loss) * len(batch_y)
+                validation_rows += len(batch_y)
+        validation_loss = validation_total / validation_rows
         history.append(
             {
                 "epoch": float(epoch + 1),
@@ -259,5 +296,6 @@ def train_sequence_model(
         "best_validation_loss": best_loss,
         "epochs_completed": len(history),
         "device": str(target_device),
+        "mixed_precision": bool(amp_enabled),
         "classes": [int(value) for value in unique],
     }
