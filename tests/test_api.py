@@ -5,8 +5,9 @@ import pytest
 from pullback_prediction.api import app as api
 
 
-def make_request():
-    timestamps = pd.date_range("2024-01-01", periods=220, freq="min", tz="UTC")
+def make_request(timeframe="M1"):
+    frequency = "min" if timeframe == "M1" else "5min"
+    timestamps = pd.date_range("2024-01-01", periods=220, freq=frequency, tz="UTC")
     candles = []
     for timestamp in timestamps:
         row = {
@@ -22,7 +23,7 @@ def make_request():
             "volume": None,
         }
         candles.append(api.Candle(**row))
-    return api.PredictionRequest(candles=candles)
+    return api.PredictionRequest(timeframe=timeframe, candles=candles)
 
 
 def test_api_health_never_enables_live_execution(monkeypatch, tmp_path):
@@ -52,7 +53,8 @@ def test_api_predict_returns_buy_sell_wait_labels(monkeypatch, tmp_path):
     model.touch()
     monkeypatch.setattr(api, "MODEL_PATH", model)
 
-    def fake_predict(frame, artifact_path, min_probability):
+    def fake_predict(frame, artifact_path, min_probability, timeframe):
+        assert timeframe == "M1"
         return pd.DataFrame(
             {
                 "signal": np.zeros(len(frame), dtype="int8"),
@@ -130,3 +132,18 @@ def test_api_predict_rejects_ask_below_bid(monkeypatch, tmp_path):
 
     assert error.value.status_code == 422
     assert "Ask prices" in error.value.detail
+
+
+
+def test_api_rejects_candle_spacing_that_disagrees_with_timeframe(monkeypatch, tmp_path):
+    model = tmp_path / "model.joblib"
+    model.touch()
+    monkeypatch.setattr(api, "MODEL_PATH", model)
+    request = make_request("M1")
+    request.timeframe = "M5"
+
+    with pytest.raises(api.HTTPException) as error:
+        api.predict(request)
+
+    assert error.value.status_code == 422
+    assert "spacing" in error.value.detail.lower()
