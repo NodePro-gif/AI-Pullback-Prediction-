@@ -13,6 +13,7 @@ from pullback_prediction.data.loader import (
 )
 from pullback_prediction.data.splits import chronological_split
 from pullback_prediction.training.baseline import train_baseline_from_frame
+from pullback_prediction.training.inference import predict_frame
 
 app = typer.Typer(no_args_is_help=True, help="XAUUSD pullback prediction research tools.")
 
@@ -69,6 +70,26 @@ def train_baseline(
     for key, value in result.items():
         typer.echo(f"{key}={value}")
 
+
+@app.command("predict")
+def predict_command(
+    input: Path = typer.Option(..., "--input", exists=True, readable=True),
+    model: Path = typer.Option(..., "--model", exists=True, readable=True),
+    output: Path = typer.Option(Path("data/processed/predictions.parquet"), "--output"),
+    min_probability: float = typer.Option(0.60, "--min-probability", min=0.0, max=1.0),
+) -> None:
+    """Generate BUY/SELL/WAIT signals and class scores from a saved model."""
+    frame = pd.read_parquet(input)
+    predictions = predict_frame(frame, model, min_probability=min_probability)
+    overlapping = [column for column in predictions.columns if column in frame.columns]
+    output_frame = frame.drop(columns=overlapping).join(predictions)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    output_frame.to_parquet(output)
+    typer.echo(f"rows={len(output_frame)}")
+    typer.echo(f"buy_signals={int((predictions['signal'] == 1).sum())}")
+    typer.echo(f"sell_signals={int((predictions['signal'] == -1).sum())}")
+    typer.echo(f"wait_signals={int((predictions['signal'] == 0).sum())}")
+    typer.echo(f"output={output}")
 
 @app.command("backtest-signals")
 def backtest_signals_command(
